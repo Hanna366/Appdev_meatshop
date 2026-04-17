@@ -12,6 +12,7 @@ import { useSubscriptionStore } from '../src/features/subscription/store/useSubs
 import { useSyncQueueStore } from '../src/features/sync/store/useSyncQueueStore';
 import { useTenantStore } from '../src/features/tenant/store/useTenantStore';
 import type { Product, ProductType } from '../src/features/product/types/productTypes';
+import { fetchProductsByTenant } from '../src/features/product/services/productService';
 
 const FILTERS: Array<'All' | ProductType> = [
   'All',
@@ -53,7 +54,6 @@ export default function ProductsScreen() {
   const canViewProducts = hasPermission(user?.role, 'products.view');
   const subscription = activeTenantId ? subscriptionsByTenantId[activeTenantId] : undefined;
   const usage = activeTenantId ? usageByTenantId[activeTenantId] : undefined;
-
   const catalogEntitlement =
     subscription && usage
       ? evaluateEntitlement({
@@ -68,25 +68,35 @@ export default function ProductsScreen() {
         };
 
   useEffect(() => {
-    if (products.length === 0 && canViewProducts && catalogEntitlement.allowed) {
-      setProducts(SEED_PRODUCTS);
-      if (user && activeTenantId) {
-        appendAuditEvent({
-          id: `audit_${Date.now()}`,
-          tenantId: activeTenantId,
-          userId: user.id,
-          action: 'products.seed',
-          createdAt: new Date().toISOString(),
-        });
+    async function load() {
+      if (!activeTenantId || !canViewProducts || !catalogEntitlement.allowed) return;
+
+      try {
+        const remoteProducts = await fetchProductsByTenant(activeTenantId);
+        setProducts(remoteProducts);
+
+        if (user) {
+          appendAuditEvent({
+            id: `audit_${Date.now()}`,
+            tenantId: activeTenantId,
+            userId: user.id,
+            action: 'products.fetch',
+            createdAt: new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        // keep existing products on error and optionally log
+        console.warn('Failed to load products from Firestore:', err);
       }
     }
+
+    load();
   }, [
     activeTenantId,
-    appendAuditEvent,
-    catalogEntitlement.allowed,
     canViewProducts,
-    products.length,
+    catalogEntitlement.allowed,
     setProducts,
+    appendAuditEvent,
     user,
   ]);
 
@@ -206,14 +216,17 @@ export default function ProductsScreen() {
               unitsToAdd: 1,
               onDenied: (decision) => {
                 if (user) {
-                  appendAuditEvent({
-                    id: `audit_${Date.now()}`,
-                    tenantId: activeTenantId,
-                    userId: user.id,
-                    action: 'subscription.limit_blocked',
-                    createdAt: new Date().toISOString(),
-                    meta: { reason: decision.reason, requiredPlan: decision.requiredPlan },
-                  });
+                      appendAuditEvent({
+                        id: `audit_${Date.now()}`,
+                        tenantId: activeTenantId,
+                        userId: user.id,
+                        action: 'subscription.limit_blocked',
+                        createdAt: new Date().toISOString(),
+                        meta: {
+                          reason: decision.reason ?? 'unknown',
+                          requiredPlan: decision.requiredPlan ?? 'none',
+                        },
+                      });
                 }
               },
             });

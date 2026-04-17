@@ -3,7 +3,9 @@ export type AuditAction =
   | 'auth.logout'
   | 'products.view'
   | 'products.seed'
-  | 'sync.enqueue';
+  | 'products.fetch'
+  | 'sync.enqueue'
+  | 'subscription.limit_blocked';
 
 export type AuditEvent = {
   id: string;
