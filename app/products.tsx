@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LockedFeatureNotice } from '../src/components/ui/LockedFeatureNotice';
 import { hasPermission } from '../src/features/access/services/accessControl';
@@ -50,6 +50,9 @@ export default function ProductsScreen() {
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'All' | ProductType>('All');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const canViewProducts = hasPermission(user?.role, 'products.view');
   const subscription = activeTenantId ? subscriptionsByTenantId[activeTenantId] : undefined;
@@ -68,11 +71,16 @@ export default function ProductsScreen() {
         };
 
   useEffect(() => {
+    let mounted = true;
+
     async function load() {
       if (!activeTenantId || !canViewProducts || !catalogEntitlement.allowed) return;
 
+      setLoading(true);
+      setError(null);
       try {
         const remoteProducts = await fetchProductsByTenant(activeTenantId);
+        if (!mounted) return;
         setProducts(remoteProducts);
 
         if (user) {
@@ -84,13 +92,20 @@ export default function ProductsScreen() {
             createdAt: new Date().toISOString(),
           });
         }
-      } catch (err) {
-        // keep existing products on error and optionally log
+      } catch (err: any) {
+        if (!mounted) return;
         console.warn('Failed to load products from Firestore:', err);
+        setError(err?.message ? String(err.message) : 'Failed to load products');
+      } finally {
+        if (mounted) setLoading(false);
       }
     }
 
     load();
+
+    return () => {
+      mounted = false;
+    };
   }, [
     activeTenantId,
     canViewProducts,
@@ -251,6 +266,13 @@ export default function ProductsScreen() {
         >
           <Text style={styles.syncButtonText}>Add Demo Product (Limit Enforced)</Text>
         </Pressable>
+        {loading && (
+          <View style={{ marginTop: 12 }}>
+            <ActivityIndicator size="small" color={PRIMARY} />
+            <Text style={{ marginTop: 6, color: '#6A655B' }}>Loading products...</Text>
+          </View>
+        )}
+        {/* error UI removed per request (errors are still logged to console) */}
       </View>
 
       <FlatList
@@ -258,6 +280,29 @@ export default function ProductsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={async () => {
+          if (!activeTenantId) return;
+          setRefreshing(true);
+          setError(null);
+          try {
+            const remoteProducts = await fetchProductsByTenant(activeTenantId);
+            setProducts(remoteProducts);
+            if (user) {
+              appendAuditEvent({
+                id: `audit_${Date.now()}`,
+                tenantId: activeTenantId,
+                userId: user.id,
+                action: 'products.fetch',
+                createdAt: new Date().toISOString(),
+              });
+            }
+          } catch (err: any) {
+            setError(err?.message ? String(err.message) : 'Failed to load products');
+          } finally {
+            setRefreshing(false);
+          }
+        }}
         ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
         renderItem={({ item }) => {
           const isSelected = selectedId === item.id;

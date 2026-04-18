@@ -1,0 +1,793 @@
+{
+  "tenantId": "tn_001",
+  "products": [
+    {
+      "id": "0nfRwQvgToChAlVxfyyO",
+      "name": "Chuck Roast",
+      "type": "Choice",
+      "unit": "kg",
+      "price": 19.25,
+      "stock": 26,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776437996,
+        "_nanoseconds": 743000000
+      }
+    },
+    {
+      "id": "31YeMWaQKpW1GE1F2kp9",
+      "name": "Brisket",
+      "type": "Premium",
+      "unit": "kg",
+      "price": 26.4,
+      "stock": 18,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776437998,
+        "_nanoseconds": 360000000
+      }
+    },
+    {
+      "id": "80ru16hxppxP75qYbBmn",
+      "name": "Beef Liver",
+      "type": "Byproduct",
+      "unit": "kg",
+      "price": 8.5,
+      "stock": 34,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776438019,
+        "_nanoseconds": 308000000
+      }
+    },
+    {
+      "id": "97s1a0zbLJ4mPILFTeOT",
+      "name": "Chuck Roast",
+      "type": "Choice",
+      "unit": "kg",
+      "price": 19.25,
+      "stock": 26,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776438018,
+        "_nanoseconds": 577000000
+      }
+    },
+    {
+      "id": "AHGvEiUHfgaTXgiQOV53",
+      "name": "Sirloin",
+      "type": "Select",
+      "unit": "kg",
+      "price": 28.75,
+      "stock": 20,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776437995,
+        "_nanoseconds": 941000000
+      }
+    },
+    {
+      "id": "HQSnCZwyTmMqvx2zV2Yg",
+      "name": "Short Ribs",
+      "type": "Prime",
+      "unit": "kg",
+      "price": 31,
+      "stock": 14,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776438019,
+        "_nanoseconds": 925000000
+      }
+    },
+    {
+      "id": "JTwGqAJis0A1uVjA1GxE",
+      "name": "Ground Beef",
+      "type": "Choice",
+      "unit": "kg",
+      "price": 14.9,
+      "stock": 40,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776438021,
+        "_nanoseconds": 294000000
+      }
+    },
+    {
+      "id": "KRisXBSTUtbO4JQPMFvy",
+      "name": "Beef Liver",
+      "type": "Byproduct",
+      "unit": "kg",
+      "price": 8.5,
+      "stock": 34,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776437997,
+        "_nanoseconds": 136000000
+      }
+    },
+    {
+      "id": "LTTp073cU6c3iGR1g6RG",
+      "name": "Short Ribs",
+      "type": "Prime",
+      "unit": "kg",
+      "price": 31,
+      "stock": 14,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776437997,
+        "_nanoseconds": 949000000
+      }
+    },
+    {
+      "id": "NFQUMelBq5iXBu4gxfmO",
+      "name": "Tenderloin",
+      "type": "Premium",
+      "unit": "kg",
+      "price": 42,
+      "stock": 11,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776438017,
+        "_nanoseconds": 300000000
+      }
+    },
+    {
+      "id": "NQ09P3b1kxfqc154gC7t",
+      "name": "Ground Beef",
+      "type": "Choice",
+      "unit": "kg",
+      "price": 14.9,
+      "stock": 40,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776437999,
+        "_nanoseconds": 175000000
+      }
+    },
+    {
+      "id": "O3E3syAqeQSGfr5Z9KMe",
+      "name": "Sirloin",
+      "type": "Select",
+      "unit": "kg",
+      "price": 28.75,
+      "stock": 20,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776438018,
+        "_nanoseconds": 154000000
+      }
+    },
+    {
+      "id": "byHkPzEG3iV1Wuox6crr",
+      "name": "Ribeye Steak",
+      "type": "Prime",
+      "unit": "kg",
+      "price": 39.5,
+      "stock": 16,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776438016,
+        "_nanoseconds": 985000000
+      }
+    },
+    {
+      "id": "dvSmHbAeXA9qg5ur6dpG",
+      "name": "Tenderloin",
+      "type": "Premium",
+      "unit": "kg",
+      "price": 42,
+      "stock": 11,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776437995,
+        "_nanoseconds": 482000000
+      }
+    },
+    {
+      "id": "xvlqUUvdfrqEv0VClGTt",
+      "name": "Brisket",
+      "type": "Premium",
+      "unit": "kg",
+      "price": 26.4,
+      "stock": 18,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776438020,
+        "_nanoseconds": 532000000
+      }
+    },
+    {
+      "id": "yo3L6VcmsXE9HSmCegp2",
+      "name": "Ribeye Steak",
+      "type": "Prime",
+      "unit": "kg",
+      "price": 39.5,
+      "stock": 16,
+      "tenantId": "tn_001",
+      "createdAt": {
+        "_seconds": 1776437994,
+        "_nanoseconds": 649000000
+      }
+    }
+  ],
+  "batches": [
+    {
+      "id": "0AXfiUEYAaqVF0UIpN7R",
+      "tenantId": "tn_001",
+      "productId": "31YeMWaQKpW1GE1F2kp9",
+      "quantity": 18,
+      "remainingQuantity": 18,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513743,
+        "_nanoseconds": 81000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513743,
+        "_nanoseconds": 81000000
+      }
+    },
+    {
+      "id": "10oyGfzhfQrW9qTdRtrx",
+      "tenantId": "tn_001",
+      "productId": "LTTp073cU6c3iGR1g6RG",
+      "quantity": 14,
+      "remainingQuantity": 14,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513754,
+        "_nanoseconds": 297000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513754,
+        "_nanoseconds": 297000000
+      }
+    },
+    {
+      "id": "7eIuXKZi2S1aR1VHqUPW",
+      "tenantId": "tn_001",
+      "productId": "byHkPzEG3iV1Wuox6crr",
+      "quantity": 16,
+      "remainingQuantity": 16,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513760,
+        "_nanoseconds": 477000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513760,
+        "_nanoseconds": 477000000
+      }
+    },
+    {
+      "id": "8D6XD2YxDix5f0BJyLuB",
+      "tenantId": "tn_001",
+      "productId": "KRisXBSTUtbO4JQPMFvy",
+      "quantity": 34,
+      "remainingQuantity": 34,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513752,
+        "_nanoseconds": 623000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513752,
+        "_nanoseconds": 623000000
+      }
+    },
+    {
+      "id": "Ewbhj8P53cmwkIBMBSQm",
+      "tenantId": "tn_001",
+      "productId": "HQSnCZwyTmMqvx2zV2Yg",
+      "quantity": 14,
+      "remainingQuantity": 14,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513749,
+        "_nanoseconds": 623000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513749,
+        "_nanoseconds": 623000000
+      }
+    },
+    {
+      "id": "IqJwNlzFxtEKDrMcKdIx",
+      "tenantId": "tn_001",
+      "productId": "NQ09P3b1kxfqc154gC7t",
+      "quantity": 40,
+      "remainingQuantity": 40,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513757,
+        "_nanoseconds": 390000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513757,
+        "_nanoseconds": 390000000
+      }
+    },
+    {
+      "id": "NHukx0stseabRFPbydXs",
+      "tenantId": "tn_001",
+      "productId": "JTwGqAJis0A1uVjA1GxE",
+      "quantity": 40,
+      "remainingQuantity": 40,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513751,
+        "_nanoseconds": 160000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513751,
+        "_nanoseconds": 160000000
+      }
+    },
+    {
+      "id": "TGOWQo2EkScC7Ji4rnr4",
+      "tenantId": "tn_001",
+      "productId": "dvSmHbAeXA9qg5ur6dpG",
+      "quantity": 11,
+      "remainingQuantity": 11,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513762,
+        "_nanoseconds": 149000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513762,
+        "_nanoseconds": 149000000
+      }
+    },
+    {
+      "id": "TUT4Chxco4mGlIjb0L7Q",
+      "tenantId": "tn_001",
+      "productId": "97s1a0zbLJ4mPILFTeOT",
+      "quantity": 26,
+      "remainingQuantity": 26,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513746,
+        "_nanoseconds": 364000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513746,
+        "_nanoseconds": 364000000
+      }
+    },
+    {
+      "id": "ULDo9GdZn2qHcabkBzP2",
+      "tenantId": "tn_001",
+      "productId": "xvlqUUvdfrqEv0VClGTt",
+      "quantity": 18,
+      "remainingQuantity": 18,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513763,
+        "_nanoseconds": 593000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513763,
+        "_nanoseconds": 593000000
+      }
+    },
+    {
+      "id": "UnTakiDeYfmw3d69s32P",
+      "tenantId": "tn_001",
+      "productId": "NFQUMelBq5iXBu4gxfmO",
+      "quantity": 11,
+      "remainingQuantity": 11,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513755,
+        "_nanoseconds": 878000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513755,
+        "_nanoseconds": 878000000
+      }
+    },
+    {
+      "id": "cV8EQdSxX1GD10ZJXHSE",
+      "tenantId": "tn_001",
+      "productId": "O3E3syAqeQSGfr5Z9KMe",
+      "quantity": 20,
+      "remainingQuantity": 20,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513758,
+        "_nanoseconds": 928000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513758,
+        "_nanoseconds": 928000000
+      }
+    },
+    {
+      "id": "dedtuAERbw9zmrLSyLhU",
+      "tenantId": "tn_001",
+      "productId": "yo3L6VcmsXE9HSmCegp2",
+      "quantity": 16,
+      "remainingQuantity": 16,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513765,
+        "_nanoseconds": 565000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513765,
+        "_nanoseconds": 565000000
+      }
+    },
+    {
+      "id": "dgdZLtvvCwFp8M4vD2Dr",
+      "tenantId": "tn_001",
+      "productId": "80ru16hxppxP75qYbBmn",
+      "quantity": 34,
+      "remainingQuantity": 34,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513744,
+        "_nanoseconds": 815000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513744,
+        "_nanoseconds": 815000000
+      }
+    },
+    {
+      "id": "hmz2aDVvQTRTUJaMW3By",
+      "tenantId": "tn_001",
+      "productId": "0nfRwQvgToChAlVxfyyO",
+      "quantity": 26,
+      "remainingQuantity": 26,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513741,
+        "_nanoseconds": 598000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513741,
+        "_nanoseconds": 598000000
+      }
+    },
+    {
+      "id": "mrCYklnR0GoD4LS0PK1e",
+      "tenantId": "tn_001",
+      "productId": "AHGvEiUHfgaTXgiQOV53",
+      "quantity": 20,
+      "remainingQuantity": 20,
+      "cost": null,
+      "supplierId": null,
+      "expiryDate": null,
+      "createdBy": null,
+      "notes": "seeded batch",
+      "createdAt": {
+        "_seconds": 1776513747,
+        "_nanoseconds": 993000000
+      },
+      "receivedAt": {
+        "_seconds": 1776513747,
+        "_nanoseconds": 993000000
+      }
+    }
+  ],
+  "transactions": [
+    {
+      "id": "2QKs0BJiES8tcRMxVk33",
+      "tenantId": "tn_001",
+      "productId": "31YeMWaQKpW1GE1F2kp9",
+      "type": "stock_in",
+      "quantity": 18,
+      "batchId": "0AXfiUEYAaqVF0UIpN7R",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513743,
+        "_nanoseconds": 620000000
+      }
+    },
+    {
+      "id": "2X5hTZwpdMgzShvZ86GV",
+      "tenantId": "tn_001",
+      "productId": "0nfRwQvgToChAlVxfyyO",
+      "type": "stock_in",
+      "quantity": 26,
+      "batchId": "hmz2aDVvQTRTUJaMW3By",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513742,
+        "_nanoseconds": 91000000
+      }
+    },
+    {
+      "id": "3voNbro1mg4W4tdSR3sT",
+      "tenantId": "tn_001",
+      "productId": "NQ09P3b1kxfqc154gC7t",
+      "type": "stock_in",
+      "quantity": 40,
+      "batchId": "IqJwNlzFxtEKDrMcKdIx",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513758,
+        "_nanoseconds": 440000000
+      }
+    },
+    {
+      "id": "8QxlpT0DCW4RLTmQOpAY",
+      "tenantId": "tn_001",
+      "productId": "NFQUMelBq5iXBu4gxfmO",
+      "type": "stock_in",
+      "quantity": 11,
+      "batchId": "UnTakiDeYfmw3d69s32P",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513756,
+        "_nanoseconds": 997000000
+      }
+    },
+    {
+      "id": "9YWmLqa28eACD7t4drsy",
+      "tenantId": "tn_001",
+      "productId": "97s1a0zbLJ4mPILFTeOT",
+      "type": "stock_in",
+      "quantity": 26,
+      "batchId": "TUT4Chxco4mGlIjb0L7Q",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513746,
+        "_nanoseconds": 883000000
+      }
+    },
+    {
+      "id": "JJzvheNLFEAvOcHlW5O2",
+      "tenantId": "tn_001",
+      "productId": "byHkPzEG3iV1Wuox6crr",
+      "type": "stock_in",
+      "quantity": 16,
+      "batchId": "7eIuXKZi2S1aR1VHqUPW",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513761,
+        "_nanoseconds": 379000000
+      }
+    },
+    {
+      "id": "L7FeUesS1nhnYJXoeYxJ",
+      "tenantId": "tn_001",
+      "productId": "O3E3syAqeQSGfr5Z9KMe",
+      "type": "stock_in",
+      "quantity": 20,
+      "batchId": "cV8EQdSxX1GD10ZJXHSE",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513759,
+        "_nanoseconds": 956000000
+      }
+    },
+    {
+      "id": "R6YOfRZvnXY6Qga94zl1",
+      "tenantId": "tn_001",
+      "productId": "KRisXBSTUtbO4JQPMFvy",
+      "type": "stock_in",
+      "quantity": 34,
+      "batchId": "8D6XD2YxDix5f0BJyLuB",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513753,
+        "_nanoseconds": 211000000
+      }
+    },
+    {
+      "id": "RVoSMc6YRwTwsy9cjhAW",
+      "tenantId": "tn_001",
+      "productId": "AHGvEiUHfgaTXgiQOV53",
+      "type": "stock_in",
+      "quantity": 20,
+      "batchId": "mrCYklnR0GoD4LS0PK1e",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513748,
+        "_nanoseconds": 506000000
+      }
+    },
+    {
+      "id": "U1Qmem2mAZQsCYmqSUIE",
+      "tenantId": "tn_001",
+      "productId": "80ru16hxppxP75qYbBmn",
+      "type": "stock_in",
+      "quantity": 34,
+      "batchId": "dgdZLtvvCwFp8M4vD2Dr",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513745,
+        "_nanoseconds": 284000000
+      }
+    },
+    {
+      "id": "UeIkdJRyT2gm8Nh792bG",
+      "tenantId": "tn_001",
+      "productId": "LTTp073cU6c3iGR1g6RG",
+      "type": "stock_in",
+      "quantity": 14,
+      "batchId": "10oyGfzhfQrW9qTdRtrx",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513755,
+        "_nanoseconds": 354000000
+      }
+    },
+    {
+      "id": "YjSn2GSxjzh0ipzp42Jh",
+      "tenantId": "tn_001",
+      "productId": "JTwGqAJis0A1uVjA1GxE",
+      "type": "stock_in",
+      "quantity": 40,
+      "batchId": "NHukx0stseabRFPbydXs",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513751,
+        "_nanoseconds": 657000000
+      }
+    },
+    {
+      "id": "wWVUulRH9cRTvoK2Zvik",
+      "tenantId": "tn_001",
+      "productId": "xvlqUUvdfrqEv0VClGTt",
+      "type": "stock_in",
+      "quantity": 18,
+      "batchId": "ULDo9GdZn2qHcabkBzP2",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513764,
+        "_nanoseconds": 650000000
+      }
+    },
+    {
+      "id": "yq5o8LsVmZbqprUtxLyY",
+      "tenantId": "tn_001",
+      "productId": "dvSmHbAeXA9qg5ur6dpG",
+      "type": "stock_in",
+      "quantity": 11,
+      "batchId": "TGOWQo2EkScC7Ji4rnr4",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513762,
+        "_nanoseconds": 952000000
+      }
+    },
+    {
+      "id": "zBt0tyq4k79WYKA6N3Gc",
+      "tenantId": "tn_001",
+      "productId": "HQSnCZwyTmMqvx2zV2Yg",
+      "type": "stock_in",
+      "quantity": 14,
+      "batchId": "Ewbhj8P53cmwkIBMBSQm",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513750,
+        "_nanoseconds": 115000000
+      }
+    },
+    {
+      "id": "zT8qPsgG6BwDQEj7q2hh",
+      "tenantId": "tn_001",
+      "productId": "yo3L6VcmsXE9HSmCegp2",
+      "type": "stock_in",
+      "quantity": 16,
+      "batchId": "dedtuAERbw9zmrLSyLhU",
+      "relatedId": null,
+      "reason": "seed",
+      "meta": {},
+      "createdBy": null,
+      "createdAt": {
+        "_seconds": 1776513766,
+        "_nanoseconds": 133000000
+      }
+    }
+  ]
+}

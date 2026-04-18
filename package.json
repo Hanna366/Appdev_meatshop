@@ -11,7 +11,10 @@
     "start:tunnel": "expo start --tunnel",
     "start:lan:clear": "expo start --host lan --clear",
     "seed:users": "node ./scripts/seedFirestoreUsers.js",
-    "seed:products": "node ./scripts/seedProducts.js"
+    "seed:products": "node ./scripts/seedProducts.js",
+    "seed:inventory": "node ./scripts/seedInventory.js"
+    ,
+    "export:snapshot": "node ./scripts/exportFirestoreSnapshot.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

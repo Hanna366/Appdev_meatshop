@@ -133,6 +133,7 @@ export default function DashboardScreen() {
           <Text style={styles.cardTitle}>Tools</Text>
           <View style={styles.secondaryActionsGroup}>
             <PrimaryButton label="Manage Plans" onPress={() => router.push('/plans')} variant="secondary" />
+            <PrimaryButton label="Inventory" onPress={() => router.push('/inventory')} variant="secondary" />
 
             {reportsEntitlement.allowed ? (
               <PrimaryButton label="Export Reports" onPress={() => {}} variant="secondary" />
