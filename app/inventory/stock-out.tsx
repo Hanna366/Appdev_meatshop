@@ -1,26 +1,33 @@
 import React, { useState } from 'react';
-import { Stack, useRouter } from 'expo-router';
-import { Alert, SafeAreaView, StyleSheet, Text, TextInput, Pressable, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Alert, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createStockOut } from '../../src/features/inventory/services/inventoryService';
 import { useTenantStore } from '../../src/features/tenant/store/useTenantStore';
 import { useAuthStore } from '../../src/features/auth/store/useAuthStore';
 
 export default function StockOutRoute() {
   const router = useRouter();
-  const productId = (router as any).params?.productId;
-  const tenantId = useTenantStore((s) => s.activeTenantId);
-  const user = useAuthStore((s) => s.user);
+  const params = useLocalSearchParams<{ productId?: string }>();
+  const productId = Array.isArray(params.productId) ? params.productId[0] : params.productId;
+  const tenantId = useTenantStore((state) => state.activeTenantId);
+  const user = useAuthStore((state) => state.user);
   const [quantity, setQuantity] = useState('');
 
   async function submit() {
-    if (!tenantId || !productId) return;
+    if (!tenantId || !productId) {
+      return;
+    }
+
     const qty = Number(quantity);
-    if (!qty || qty <= 0) return Alert.alert('Invalid quantity');
+    if (!qty || qty <= 0) {
+      return Alert.alert('Invalid quantity');
+    }
+
     try {
       await createStockOut(tenantId, String(productId), qty, user?.id);
       router.back();
-    } catch (err: any) {
-      Alert.alert('Failed', String(err?.message ?? err));
+    } catch (error: any) {
+      Alert.alert('Failed', String(error?.message ?? error));
     }
   }
 

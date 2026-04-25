@@ -4,85 +4,54 @@ import { useRouter } from 'expo-router';
 import { useInventoryStore } from '../store/useInventoryStore';
 import { fetchInventoryByTenantWithProducts } from '../services/inventoryService';
 import { useTenantStore } from '../../tenant/store/useTenantStore';
-import { useAuthStore } from '../../auth/store/useAuthStore';
 import firebaseConfig from '../../../config/firebaseConfig';
+import { InventoryStatCard, InventorySearchBar, InventoryItemCard, FloatingAddButton } from '../components/InventoryUI';
 
-function SnapshotFallback({ tenantId, setSummaries }: { tenantId: string | null; setSummaries: (s: any[]) => void }) {
+function SnapshotFallback({
+  tenantId,
+  setSummaries,
+}: {
+  tenantId: string | null;
+  setSummaries: (summaries: any[]) => void;
+}) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true;
+
     async function load() {
       try {
         const snap = await import('../../../config/firestoreSnapshot.json').catch(() => null);
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         if (!snap || !snap.default) {
-          setErr('No local snapshot found. Run `npm run export:snapshot` to create one, or configure Firebase client.');
-        } else {
-          // map snapshot products -> ProductInventorySummary shape
-          const data = (snap as any).default;
-          const products = data.products || [];
-          const summaries = products.map((p: any) => ({
-            productId: p.id,
-            productName: p.name,
-            tenantId: data.tenantId,
-            totalQuantity: Number(p.stock ?? 0),
-            batchesCount: (data.batches || []).filter((b: any) => b.productId === p.id).length,
-            lowStock: false,
-            nextExpiryDate: null,
-            unit: p.unit ?? undefined,
-          }));
-          setSummaries(summaries as any[]);
+          setErr('No local snapshot found. Run `npm run export:snapshot` or configure Firebase.');
+          return;
         }
-      } catch (e: any) {
-        setErr(String(e?.message ?? e));
+
+        const data = (snap as any).default;
+        const products = data.products || [];
+        const summaries = products.map((product: any) => ({
+          productId: product.id,
+          productName: product.name,
+          tenantId: data.tenantId,
+          totalQuantity: Number(product.stock ?? 0),
+          batchesCount: (data.batches || []).filter((batch: any) => batch.productId === product.id).length,
+          lowStock: false,
+          nextExpiryDate: null,
+          unit: product.unit ?? undefined,
+        }));
+
+        setSummaries(summaries);
+      } catch (error: any) {
+        setErr(String(error?.message ?? error));
       } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-    load();
-    return () => { mounted = false; };
-  }, [tenantId]);
-
-  if (loading) return <View style={{ padding: 20 }}><ActivityIndicator /></View>;
-  if (err) return <View style={{ padding: 20 }}><Text style={{ color: '#7C7464' }}>{err}</Text></View>;
-  return null;
-}
-
-export default function InventoryListScreen() {
-  const router = useRouter();
-  const tenantId = useTenantStore((s) => s.activeTenantId);
-  const user = useAuthStore((s) => s.user);
-  const summaries = useInventoryStore((s) => s.summaries);
-  const setSummaries = useInventoryStore((s) => s.setSummaries);
-  const loading = useInventoryStore((s) => s.loading);
-  const setLoading = useInventoryStore((s) => s.setLoading);
-
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      if (!tenantId) return;
-      // if firebase client is not configured, skip remote fetch to avoid errors
-      if (!firebaseConfig || (firebaseConfig.apiKey ?? '').includes('YOUR_API_KEY')) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      try {
-        // try batch-based summaries first
-        let data = await fetchInventoryByTenantWithProducts(tenantId);
-        // if no batches/summaries, fallback to products collection as source of inventory
-        if (!data || data.length === 0) {
-          const fromProducts = await (await import('../services/inventoryService')).fetchInventoryFromProducts(tenantId);
-          data = fromProducts as any;
+        if (mounted) {
+          setLoading(false);
         }
-        if (!mounted) return;
-        setSummaries(data as any);
-      } catch (err) {
-        console.warn('Failed to load inventory summaries', err);
-      } finally {
-        if (mounted) setLoading(false);
       }
     }
 
@@ -90,19 +59,108 @@ export default function InventoryListScreen() {
     return () => {
       mounted = false;
     };
-  }, [tenantId]);
+  }, [tenantId, setSummaries]);
+
+  if (loading) {
+    return (
+      <View style={styles.feedbackBlock}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (err) {
+    return (
+      <View style={styles.feedbackBlock}>
+        <Text style={styles.feedbackText}>{err}</Text>
+      </View>
+    );
+  }
+
+  return null;
+}
+
+export default function InventoryListScreen() {
+  const router = useRouter();
+  const tenantId = useTenantStore((state) => state.activeTenantId);
+  const summaries = useInventoryStore((state) => state.summaries);
+  const setSummaries = useInventoryStore((state) => state.setSummaries);
+  const loading = useInventoryStore((state) => state.loading);
+  const setLoading = useInventoryStore((state) => state.setLoading);
+  const [q, setQ] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function load() {
+      if (!tenantId) {
+        setLoading(false);
+        return;
+      }
+
+      if (!firebaseConfig || (firebaseConfig.apiKey ?? '').includes('YOUR_API_KEY')) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        let data = await fetchInventoryByTenantWithProducts(tenantId);
+        if (!data || data.length === 0) {
+          const inventoryService = await import('../services/inventoryService');
+          data = (await inventoryService.fetchInventoryFromProducts(tenantId)) as any;
+        }
+
+        if (!mounted) {
+          return;
+        }
+
+        setSummaries(data as any);
+      } catch (error) {
+        console.warn('Failed to load inventory summaries', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [setLoading, setSummaries, tenantId]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Inventory</Text>
-        <Text style={styles.subtitle}>Tenant: {tenantId ?? '—'}</Text>
+      <View style={[styles.header, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Pressable onPress={() => {}} style={{ marginRight: 12 }}>
+            <Text style={{ fontSize: 20 }}>☰</Text>
+          </Pressable>
+          <View>
+            <Text style={styles.title}>Inventory</Text>
+            <Text style={styles.subtitle}>Tenant: {tenantId ?? '—'}</Text>
+          </View>
+        </View>
+        <Pressable onPress={() => {}}>
+          <Text style={{ fontSize: 20 }}>🔔</Text>
+        </Pressable>
       </View>
 
-      {/* If Firebase client is missing, SnapshotFallback will seed `useInventoryStore` from a local file. Render it (it returns null after setting data) */}
       {(!firebaseConfig || (firebaseConfig.apiKey ?? '').includes('YOUR_API_KEY')) && (
-        <SnapshotFallback tenantId={tenantId} setSummaries={setSummaries} />
+        <SnapshotFallback tenantId={tenantId} setSummaries={setSummaries as any} />
       )}
+
+      <View style={{ paddingHorizontal: 16 }}>
+        <View style={{ flexDirection: 'row', marginTop: 8 }}>
+          <InventoryStatCard title="Total Items" value={summaries?.length ?? 0} subtitle="All items" />
+          <InventoryStatCard title="Low Stock" value={summaries?.filter((s: any) => s.lowStock).length ?? 0} subtitle="Need attention" />
+          <InventoryStatCard title="Out of Stock" value={summaries?.filter((s: any) => (s.totalQuantity ?? 0) <= 0).length ?? 0} subtitle="Out of stock" />
+        </View>
+
+        <InventorySearchBar value={q} onChange={setQ} onFilter={() => {}} />
+      </View>
 
       {loading ? (
         <View style={styles.loading}>
@@ -112,39 +170,30 @@ export default function InventoryListScreen() {
         <FlatList
           data={summaries}
           keyExtractor={(item) => item.productId}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <Pressable
-                style={{ flex: 1 }}
-                onPress={() => router.push({ pathname: '/inventory/[productId]', params: { productId: item.productId } })}
-              >
-                <Text style={styles.product}>{item.productName ?? item.productId}</Text>
-                <Text style={styles.meta}>{item.totalQuantity} {(item as any).unit ?? ''} • Batches: {item.batchesCount}</Text>
-              </Pressable>
-
-              <View style={styles.rowActions}>
-                <Pressable style={styles.smallButton} onPress={() => router.push({ pathname: '/inventory/stock-in', params: { productId: item.productId } })}>
-                  <Text style={styles.smallButtonText}>Stock In</Text>
-                </Pressable>
-                <Pressable style={styles.smallButton} onPress={() => router.push({ pathname: '/inventory/stock-out', params: { productId: item.productId } })}>
-                  <Text style={styles.smallButtonText}>Stock Out</Text>
-                </Pressable>
-                <Pressable style={styles.smallButton} onPress={() => router.push({ pathname: '/inventory/adjust', params: { productId: item.productId } })}>
-                  <Text style={styles.smallButtonText}>Adjust</Text>
-                </Pressable>
-                <Pressable style={styles.smallButton} onPress={() => router.push({ pathname: '/inventory/transactions', params: { productId: item.productId } })}>
-                  <Text style={styles.smallButtonText}>History</Text>
-                </Pressable>
-              </View>
-
-              {item.lowStock && <Text style={styles.low}>Low</Text>}
-            </View>
-          )}
+          renderItem={({ item }) => {
+            if (q && !String(item.productName ?? item.productId).toLowerCase().includes(q.toLowerCase())) return null;
+            return (
+              <InventoryItemCard
+                summary={item}
+                onPress={() => router.push(`/inventory/${item.productId}`)}
+                onAction={(a) => {
+                  if (a === 'in') router.push(`/inventory/stock-in?productId=${encodeURIComponent(item.productId)}`);
+                  if (a === 'out') router.push(`/inventory/stock-out?productId=${encodeURIComponent(item.productId)}`);
+                  if (a === 'adjust') router.push(`/inventory/adjust?productId=${encodeURIComponent(item.productId)}`);
+                  if (a === 'history') router.push(`/inventory/transactions?productId=${encodeURIComponent(item.productId)}`);
+                }}
+              />
+            );
+          }}
           ListEmptyComponent={() => (
-            <View style={styles.empty}><Text style={styles.emptyText}>No inventory records found.</Text></View>
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>No inventory records found.</Text>
+            </View>
           )}
         />
       )}
+
+      <FloatingAddButton onPress={() => router.push('/inventory/stock-in')} />
     </SafeAreaView>
   );
 }
@@ -154,8 +203,11 @@ const styles = StyleSheet.create({
   header: { padding: 16 },
   title: { fontSize: 22, fontWeight: '700' },
   subtitle: { marginTop: 4, color: '#6A655B' },
+  feedbackBlock: { padding: 20 },
+  feedbackText: { color: '#7C7464' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   row: { padding: 14, borderBottomWidth: 1, borderColor: '#EEE', flexDirection: 'row', alignItems: 'center' },
+  rowMain: { flex: 1 },
   product: { fontSize: 16, fontWeight: '700' },
   meta: { color: '#6A655B', marginTop: 4 },
   low: { color: '#A23821', fontWeight: '700' },

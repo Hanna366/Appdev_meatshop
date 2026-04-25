@@ -1,28 +1,42 @@
 import React, { useState } from 'react';
-import { Stack, useRouter } from 'expo-router';
-import { Alert, SafeAreaView, StyleSheet, Text, TextInput, Pressable, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Alert, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createWasteLog } from '../../src/features/inventory/services/inventoryService';
 import { useTenantStore } from '../../src/features/tenant/store/useTenantStore';
 import { useAuthStore } from '../../src/features/auth/store/useAuthStore';
 
 export default function WasteRoute() {
   const router = useRouter();
-  const productId = (router as any).params?.productId;
-  const batchId = (router as any).params?.batchId;
-  const tenantId = useTenantStore((s) => s.activeTenantId);
-  const user = useAuthStore((s) => s.user);
+  const params = useLocalSearchParams<{ batchId?: string; productId?: string }>();
+  const productId = Array.isArray(params.productId) ? params.productId[0] : params.productId;
+  const batchId = Array.isArray(params.batchId) ? params.batchId[0] : params.batchId;
+  const tenantId = useTenantStore((state) => state.activeTenantId);
+  const user = useAuthStore((state) => state.user);
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('Spoilage');
 
   async function submit() {
-    if (!tenantId || !productId) return;
+    if (!tenantId || !productId) {
+      return;
+    }
+
     const qty = Number(quantity);
-    if (!qty || qty <= 0) return Alert.alert('Invalid quantity');
+    if (!qty || qty <= 0) {
+      return Alert.alert('Invalid quantity');
+    }
+
     try {
-      await createWasteLog({ tenantId, productId: String(productId), batchId: batchId ?? undefined, quantity: qty, reason, userId: user?.id });
+      await createWasteLog({
+        tenantId,
+        productId: String(productId),
+        batchId: batchId ?? undefined,
+        quantity: qty,
+        reason,
+        userId: user?.id,
+      });
       router.back();
-    } catch (err: any) {
-      Alert.alert('Failed', String(err?.message ?? err));
+    } catch (error: any) {
+      Alert.alert('Failed', String(error?.message ?? error));
     }
   }
 
