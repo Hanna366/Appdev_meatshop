@@ -58,6 +58,21 @@ const RecaptchaVerifier = forwardRef<RecaptchaVerifierRef, Props>(
           return;
         }
 
+        // Read the site key at render time (not module load) to pick up env injection
+        const siteKey =
+          process.env.EXPO_PUBLIC_RECAPTCHA_SITE_KEY ??
+          (typeof window !== 'undefined' ? (window as any).__EXPO_PUBLIC_RECAPTCHA_SITE_KEY : '') ??
+          '';
+
+        if (!siteKey) {
+          console.error(
+            '[RecaptchaVerifier] EXPO_PUBLIC_RECAPTCHA_SITE_KEY is not set. ' +
+            'Add it to your .env file and restart the dev server.'
+          );
+          setVisible(false);
+          return;
+        }
+
         // Reset previous widget if exists, then re-render with fresh callbacks
         if (widgetIdRef.current !== null) {
           try { window.grecaptcha.reset(widgetIdRef.current); } catch (_) {}
@@ -65,7 +80,7 @@ const RecaptchaVerifier = forwardRef<RecaptchaVerifierRef, Props>(
         }
 
         widgetIdRef.current = window.grecaptcha.render(containerRef.current, {
-          sitekey: SITE_KEY,
+          sitekey: siteKey,
           callback: (token: string) => {
             setVisible(false);
             onVerify(token);
@@ -79,6 +94,7 @@ const RecaptchaVerifier = forwardRef<RecaptchaVerifierRef, Props>(
 
       renderWidget();
     }, [visible, onVerify, onExpire]);
+
 
     useImperativeHandle(ref, () => ({
       open: () => {

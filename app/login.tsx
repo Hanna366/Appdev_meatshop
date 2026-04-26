@@ -1,7 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
+import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Pressable,
@@ -18,6 +20,9 @@ import { loginSchema, type LoginFormValues } from '../src/features/auth/schema/l
 import { authService } from '../src/features/auth/services/authService';
 import { useAuthStore } from '../src/features/auth/store/useAuthStore';
 import { useTenantStore } from '../src/features/tenant/store/useTenantStore';
+import RecaptchaVerifier, { type RecaptchaVerifierRef } from '../src/components/RecaptchaVerifier';
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
 type FormInputProps = {
   label: string;
@@ -78,16 +83,23 @@ function SocialButton({ label }: SocialButtonProps) {
   );
 }
 
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+
 export default function LoginScreen() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const setActiveTenant = useTenantStore((state) => state.setActiveTenant);
   const appendAuditEvent = useAuditLogStore((state) => state.appendEvent);
 
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<RecaptchaVerifierRef>(null);
+
   const {
     control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
+    trigger,
+    getValues,
+    formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -97,7 +109,11 @@ export default function LoginScreen() {
     mode: 'onSubmit',
   });
 
-  const onSubmit = handleSubmit(async (values) => {
+  /** Called by RecaptchaVerifier when the user passes the challenge. */
+  const handleRecaptchaVerify = async (token: string) => {
+    setRecaptchaToken(token);
+    const values = getValues();
+    setIsLoginLoading(true);
     try {
       const user = await authService.login(values);
       setUser(user);
@@ -113,8 +129,22 @@ export default function LoginScreen() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Something went wrong.';
       Alert.alert('Login failed', message);
+    } finally {
+      setIsLoginLoading(false);
     }
-  });
+  };
+
+  /** Token expires after 2 minutes — clear it so the user must re-verify. */
+  const handleRecaptchaExpire = () => {
+    setRecaptchaToken(null);
+  };
+
+  /** Validate the form first; only open reCAPTCHA if inputs are valid. */
+  const onSubmit = async () => {
+    const valid = await trigger();
+    if (!valid) return;
+    recaptchaRef.current?.open();
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -181,15 +211,33 @@ export default function LoginScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={onSubmit}
-            disabled={isSubmitting}
+            disabled={isLoginLoading}
             style={({ pressed }) => [
               styles.loginButton,
-              isSubmitting ? styles.loginButtonDisabled : null,
-              pressed && !isSubmitting ? styles.loginButtonPressed : null,
+              isLoginLoading ? styles.loginButtonDisabled : null,
+              pressed && !isLoginLoading ? styles.loginButtonPressed : null,
             ]}
           >
-            <Text style={styles.loginButtonText}>{isSubmitting ? 'LOGGING IN...' : 'LOGIN'}</Text>
+            <View style={styles.loginButtonInner}>
+              {isLoginLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.loginButtonText}>LOGIN</Text>
+              )}
+              {recaptchaToken && !isLoginLoading ? (
+                <View style={styles.verifiedBadge}>
+                  <Text style={styles.verifiedBadgeText}>✓</Text>
+                </View>
+              ) : null}
+            </View>
           </Pressable>
+
+          {/* reCAPTCHA — opens as a modal when LOGIN is pressed */}
+          <RecaptchaVerifier
+            ref={recaptchaRef}
+            onVerify={handleRecaptchaVerify}
+            onExpire={handleRecaptchaExpire}
+          />
 
           <Text style={styles.dividerText}>Or sign in with</Text>
 
@@ -210,6 +258,8 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -314,11 +364,31 @@ const styles = StyleSheet.create({
   loginButtonDisabled: {
     opacity: 0.6,
   },
+  loginButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   loginButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
     letterSpacing: 0.5,
+  },
+  verifiedBadge: {
+    backgroundColor: '#2E7D32',
+    borderRadius: 99,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verifiedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 14,
   },
   dividerText: {
     textAlign: 'center',
