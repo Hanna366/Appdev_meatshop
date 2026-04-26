@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+const create = (require('zustand') as any).create as typeof import('zustand').create;
+const { createJSONStorage, persist } = (require('zustand/middleware') as any) as typeof import('zustand/middleware');
 
 import type { Tenant } from '../types/tenantTypes';
 

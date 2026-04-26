@@ -1,6 +1,5 @@
 import type { LoginPayload, User } from '../types/authTypes';
-import { getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getAuthInstance, getDb } from '../../../lib/firebase';
 
 const DEMO_CREDENTIALS = {
   email: '2301111318@student.buksu.edu.ph',
@@ -8,9 +7,11 @@ const DEMO_CREDENTIALS = {
 };
 
 async function getUserProfile(uid: string): Promise<User> {
-  const db = getFirestore();
-  const ref = doc(db, 'users', uid);
-  const snap = await getDoc(ref);
+  const db = await getDb();
+  if (!db) throw new Error('Firestore not initialized');
+  const firestore: any = await import('firebase/firestore');
+  const ref = firestore.doc(db, 'users', uid);
+  const snap = await firestore.getDoc(ref);
 
   if (!snap.exists()) {
     // If no profile exists, throw to allow caller to attempt auto-provisioning elsewhere.
@@ -31,7 +32,11 @@ async function getUserProfile(uid: string): Promise<User> {
 export const authService = {
   async login(values: { email: string; password: string }): Promise<User> {
     try {
-      const cred = await signInWithEmailAndPassword(getAuth(), values.email, values.password);
+      const auth = await getAuthInstance();
+      if (!auth) throw new Error('Auth not initialized');
+      const authMod: any = await import('firebase/auth');
+      const { signInWithEmailAndPassword } = authMod as any;
+      const cred = await signInWithEmailAndPassword(auth, values.email, values.password);
       // Try to load Firestore profile, fall back to a merged Firebase user if profile missing.
       try {
         const { loadUserProfile } = await import('./userProfileService');
@@ -93,6 +98,10 @@ export const authService = {
   },
 
   async logout() {
-    await signOut(getAuth());
+    const auth = await getAuthInstance();
+    if (!auth) return;
+    const authMod: any = await import('firebase/auth');
+    const { signOut } = authMod as any;
+    await signOut(auth);
   },
 };

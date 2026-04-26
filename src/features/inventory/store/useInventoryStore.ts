@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+const create = (require('zustand') as any).create as typeof import('zustand').create;
 import type { ProductInventorySummary } from '../types/inventoryTypes';
 
 interface InventoryState {

@@ -1,18 +1,4 @@
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { getDb } from '../../../lib/firebase';
 import type {
   InventoryBatch,
   InventoryTransaction,
@@ -27,24 +13,30 @@ const BATCHES = 'inventoryBatches';
 const TRANSACTIONS = 'inventoryTransactions';
 
 export async function fetchBatchesByProduct(tenantId: string, productId: string) {
-  const q = query(
-    collection(db, BATCHES),
-    where('tenantId', '==', tenantId),
-    where('productId', '==', productId),
-    where('remainingQuantity', '>', 0),
-    orderBy('receivedAt', 'asc'),
+  const db = await getDb();
+  if (!db) return [];
+  const firestore: any = await import('firebase/firestore');
+  const q = firestore.query(
+    firestore.collection(db, BATCHES),
+    firestore.where('tenantId', '==', tenantId),
+    firestore.where('productId', '==', productId),
+    firestore.where('remainingQuantity', '>', 0),
+    firestore.orderBy('receivedAt', 'asc'),
   );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as InventoryBatch) }));
+  const snap = await firestore.getDocs(q);
+  return snap.docs.map((d: any) => ({ id: d.id, ...(d.data() as InventoryBatch) }));
 }
 
 export async function fetchInventoryByTenant(tenantId: string): Promise<ProductInventorySummary[]> {
   // Aggregate batches per product. Simple client-side aggregation.
-  const q = query(collection(db, BATCHES), where('tenantId', '==', tenantId));
-  const snap = await getDocs(q);
+  const db = await getDb();
+  if (!db) return [];
+  const firestore: any = await import('firebase/firestore');
+  const q = firestore.query(firestore.collection(db, BATCHES), firestore.where('tenantId', '==', tenantId));
+  const snap = await firestore.getDocs(q);
 
   const map = new Map<string, ProductInventorySummary>();
-  snap.docs.forEach((d) => {
+  snap.docs.forEach((d: any) => {
     const b = d.data() as InventoryBatch;
     const pid = b.productId;
     if (!map.has(pid)) {
@@ -78,8 +70,11 @@ export async function fetchInventoryByTenantWithProducts(tenantId: string): Prom
   if (summaries.length === 0) return summaries;
 
   // fetch product documents for these productIds
+  const db = await getDb();
+  if (!db) return summaries;
+  const firestore: any = await import('firebase/firestore');
   const productIds = summaries.map((s) => s.productId);
-  const prodDocs = await Promise.all(productIds.map((pid) => getDoc(doc(db, 'products', pid)).catch(() => null)));
+  const prodDocs = await Promise.all(productIds.map((pid: any) => firestore.getDoc(firestore.doc(db, 'products', pid)).catch(() => null)));
   const productMap = new Map<string, any>();
   prodDocs.forEach((d) => {
     if (d && d.exists()) productMap.set(d.id, d.data());
@@ -97,9 +92,12 @@ export async function fetchInventoryByTenantWithProducts(tenantId: string): Prom
 
 // If there are no batches, fall back to using the products collection as the inventory source.
 export async function fetchInventoryFromProducts(tenantId: string): Promise<ProductInventorySummary[]> {
-  const q = query(collection(db, 'products'), where('tenantId', '==', tenantId));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => {
+  const db = await getDb();
+  if (!db) return [];
+  const firestore: any = await import('firebase/firestore');
+  const q = firestore.query(firestore.collection(db, 'products'), firestore.where('tenantId', '==', tenantId));
+  const snap = await firestore.getDocs(q);
+  return snap.docs.map((d: any) => {
     const pdata: any = d.data();
     const totalQuantity = Number(pdata.stock ?? 0);
     return {
@@ -121,10 +119,13 @@ export async function fetchInventoryFromProducts(tenantId: string): Promise<Prod
 
 // Stock in against a product: atomically update product.stock and write an inventory transaction.
 export async function stockInProduct(input: StockInInput): Promise<void> {
-  const productRef = doc(db, 'products', input.productId);
-  const txRef = collection(db, TRANSACTIONS);
+  const db = await getDb();
+  if (!db) throw new Error('Firestore not initialized');
+  const firestore: any = await import('firebase/firestore');
+  const productRef = firestore.doc(db, 'products', input.productId);
+  const txRef = firestore.collection(db, TRANSACTIONS);
 
-  await runTransaction(db, async (tx) => {
+  await firestore.runTransaction(db, async (tx: any) => {
     const prodSnap = await tx.get(productRef as any);
     if (!prodSnap.exists()) throw new Error('product not found');
     const prod = prodSnap.data() as any;
@@ -133,7 +134,7 @@ export async function stockInProduct(input: StockInInput): Promise<void> {
     tx.update(productRef as any, { stock: newStock });
 
     // create transaction record
-    const tDoc = doc(txRef);
+    const tDoc = firestore.doc(txRef);
     tx.set(tDoc, {
       tenantId: input.tenantId,
       productId: input.productId,
@@ -144,18 +145,21 @@ export async function stockInProduct(input: StockInInput): Promise<void> {
       reason: 'receive',
       meta: { cost: input.cost ?? null, notes: input.notes ?? null },
       createdBy: input.userId ?? null,
-      createdAt: serverTimestamp(),
+      createdAt: firestore.serverTimestamp(),
     } as any);
   });
 }
 
 export async function createStockIn(input: StockInInput): Promise<string> {
   // Transactionally create a batch, update product.stock, and write a transaction
-  const batchRef = doc(collection(db, BATCHES));
-  const txRef = doc(collection(db, TRANSACTIONS));
-  const productRef = doc(db, 'products', input.productId);
+  const db = await getDb();
+  if (!db) throw new Error('Firestore not initialized');
+  const firestore: any = await import('firebase/firestore');
+  const batchRef = firestore.doc(firestore.collection(db, BATCHES));
+  const txRef = firestore.doc(firestore.collection(db, TRANSACTIONS));
+  const productRef = firestore.doc(db, 'products', input.productId);
 
-  await runTransaction(db, async (tx) => {
+  await firestore.runTransaction(db, async (tx: any) => {
     // create batch
     tx.set(batchRef, {
       tenantId: input.tenantId,
@@ -164,10 +168,10 @@ export async function createStockIn(input: StockInInput): Promise<string> {
       remainingQuantity: input.quantity,
       cost: input.cost ?? null,
       supplierId: input.supplierId ?? null,
-      receivedAt: input.receivedAt ?? serverTimestamp(),
+      receivedAt: input.receivedAt ?? firestore.serverTimestamp(),
       expiryDate: input.expiryDate ?? null,
       createdBy: input.userId ?? null,
-      createdAt: serverTimestamp(),
+      createdAt: firestore.serverTimestamp(),
       notes: input.notes ?? null,
     } as any);
 
@@ -190,7 +194,7 @@ export async function createStockIn(input: StockInInput): Promise<string> {
       reason: 'receive',
       meta: { supplierId: input.supplierId ?? null },
       createdBy: input.userId ?? null,
-      createdAt: serverTimestamp(),
+      createdAt: firestore.serverTimestamp(),
     } as any);
   });
 
@@ -203,15 +207,18 @@ export async function createStockOut(tenantId: string, productId: string, quanti
 
   const transactions: string[] = [];
 
-  await runTransaction(db, async (tx) => {
-    const batchesQ = query(
-      collection(db, BATCHES),
-      where('tenantId', '==', tenantId),
-      where('productId', '==', productId),
-      where('remainingQuantity', '>', 0),
-      orderBy('receivedAt', 'asc'),
+  const db = await getDb();
+  if (!db) throw new Error('Firestore not initialized');
+  const firestore: any = await import('firebase/firestore');
+  await firestore.runTransaction(db, async (tx: any) => {
+    const batchesQ = firestore.query(
+      firestore.collection(db, BATCHES),
+      firestore.where('tenantId', '==', tenantId),
+      firestore.where('productId', '==', productId),
+      firestore.where('remainingQuantity', '>', 0),
+      firestore.orderBy('receivedAt', 'asc'),
     );
-    const snap = await getDocs(batchesQ);
+    const snap = await firestore.getDocs(batchesQ);
     let remaining = quantity;
     for (const docSnap of snap.docs) {
       if (remaining <= 0) break;
@@ -219,11 +226,11 @@ export async function createStockOut(tenantId: string, productId: string, quanti
       const available = data.remainingQuantity || 0;
       if (available <= 0) continue;
       const take = Math.min(available, remaining);
-      const batchRef = doc(db, BATCHES, docSnap.id);
+      const batchRef = firestore.doc(db, BATCHES, docSnap.id);
       tx.update(batchRef, { remainingQuantity: available - take });
 
       // add transaction doc
-      const tRef = doc(collection(db, TRANSACTIONS));
+      const tRef = firestore.doc(firestore.collection(db, TRANSACTIONS));
       tx.set(tRef, {
         tenantId,
         productId,
@@ -234,7 +241,7 @@ export async function createStockOut(tenantId: string, productId: string, quanti
         reason: 'sale',
         meta: {},
         createdBy: userId ?? null,
-        createdAt: serverTimestamp(),
+        createdAt: firestore.serverTimestamp(),
       } as any);
       transactions.push(tRef.id);
       remaining -= take;
@@ -257,15 +264,18 @@ export async function createWasteLog(input: WasteLogInput): Promise<string[]> {
 
   const results: string[] = [];
 
-  await runTransaction(db, async (tx) => {
+  const db = await getDb();
+  if (!db) throw new Error('Firestore not initialized');
+  const firestore: any = await import('firebase/firestore');
+  await firestore.runTransaction(db, async (tx: any) => {
     if (input.batchId) {
-      const bRef = doc(db, BATCHES, input.batchId);
+      const bRef = firestore.doc(db, BATCHES, input.batchId);
       const bSnap = await tx.get(bRef);
       if (!bSnap.exists()) throw new Error('batch not found');
       const b = bSnap.data() as InventoryBatch;
       const take = Math.min(b.remainingQuantity, qty);
       tx.update(bRef, { remainingQuantity: b.remainingQuantity - take });
-      const tRef = doc(collection(db, TRANSACTIONS));
+      const tRef = firestore.doc(firestore.collection(db, TRANSACTIONS));
       tx.set(tRef, {
         tenantId,
         productId,
@@ -276,29 +286,29 @@ export async function createWasteLog(input: WasteLogInput): Promise<string[]> {
         reason: input.reason,
         meta: { notes: input.notes ?? null },
         createdBy: input.userId ?? null,
-        createdAt: serverTimestamp(),
+        createdAt: firestore.serverTimestamp(),
       } as any);
       results.push(tRef.id);
     } else {
       // FIFO depletion similar to stock_out
       let remaining = qty;
-      const batchesQ = query(
-        collection(db, BATCHES),
-        where('tenantId', '==', tenantId),
-        where('productId', '==', productId),
-        where('remainingQuantity', '>', 0),
-        orderBy('receivedAt', 'asc'),
+      const batchesQ = firestore.query(
+        firestore.collection(db, BATCHES),
+        firestore.where('tenantId', '==', tenantId),
+        firestore.where('productId', '==', productId),
+        firestore.where('remainingQuantity', '>', 0),
+        firestore.orderBy('receivedAt', 'asc'),
       );
-      const snap = await getDocs(batchesQ);
+      const snap = await firestore.getDocs(batchesQ);
       for (const docSnap of snap.docs) {
         if (remaining <= 0) break;
         const data = docSnap.data() as InventoryBatch;
         const available = data.remainingQuantity || 0;
         if (available <= 0) continue;
         const take = Math.min(available, remaining);
-        const batchRef = doc(db, BATCHES, docSnap.id);
+        const batchRef = firestore.doc(db, BATCHES, docSnap.id);
         tx.update(batchRef, { remainingQuantity: available - take });
-        const tRef = doc(collection(db, TRANSACTIONS));
+        const tRef = firestore.doc(firestore.collection(db, TRANSACTIONS));
         tx.set(tRef, {
           tenantId,
           productId,
@@ -309,7 +319,7 @@ export async function createWasteLog(input: WasteLogInput): Promise<string[]> {
           reason: input.reason,
           meta: { notes: input.notes ?? null },
           createdBy: input.userId ?? null,
-          createdAt: serverTimestamp(),
+          createdAt: firestore.serverTimestamp(),
         } as any);
         results.push(tRef.id);
         remaining -= take;
@@ -319,7 +329,7 @@ export async function createWasteLog(input: WasteLogInput): Promise<string[]> {
         throw new Error('Insufficient stock to log waste for requested quantity');
       }
     }
-  });
+    });
 
   return results;
 }
@@ -333,20 +343,23 @@ export async function adjustStock(input: StockAdjustmentInput): Promise<string> 
     await createStockOut(input.tenantId, input.productId, Math.abs(input.quantity), input.userId);
   } else {
     // positive adjustment: create a synthetic batch representing adjustment
-    const batchRef = await addDoc(collection(db, BATCHES), {
+    const db = await getDb();
+    if (!db) throw new Error('Firestore not initialized');
+    const firestore: any = await import('firebase/firestore');
+    const batchRef = await firestore.addDoc(firestore.collection(db, BATCHES), {
       tenantId: input.tenantId,
       productId: input.productId,
       quantity: input.quantity,
       remainingQuantity: input.quantity,
       cost: null,
       supplierId: null,
-      receivedAt: serverTimestamp(),
+      receivedAt: firestore.serverTimestamp(),
       expiryDate: null,
       createdBy: input.userId ?? null,
-      createdAt: serverTimestamp(),
+      createdAt: firestore.serverTimestamp(),
       notes: `adjustment:${input.reason}`,
     });
-    await addDoc(collection(db, TRANSACTIONS), {
+    await firestore.addDoc(firestore.collection(db, TRANSACTIONS), {
       tenantId: input.tenantId,
       productId: input.productId,
       type: 'adjustment',
@@ -356,7 +369,7 @@ export async function adjustStock(input: StockAdjustmentInput): Promise<string> 
       reason: input.reason,
       meta: { notes: input.notes ?? null },
       createdBy: input.userId ?? null,
-      createdAt: serverTimestamp(),
+      createdAt: firestore.serverTimestamp(),
     } as any);
     return batchRef.id;
   }
@@ -365,15 +378,18 @@ export async function adjustStock(input: StockAdjustmentInput): Promise<string> 
 }
 
 export async function fetchInventoryTransactions(tenantId: string, productId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const firestore: any = await import('firebase/firestore');
   const q = productId
-    ? query(
-        collection(db, TRANSACTIONS),
-        where('tenantId', '==', tenantId),
-        where('productId', '==', productId),
-        orderBy('createdAt', 'desc'),
+    ? firestore.query(
+        firestore.collection(db, TRANSACTIONS),
+        firestore.where('tenantId', '==', tenantId),
+        firestore.where('productId', '==', productId),
+        firestore.orderBy('createdAt', 'desc'),
       )
-    : query(collection(db, TRANSACTIONS), where('tenantId', '==', tenantId), orderBy('createdAt', 'desc'));
+    : firestore.query(firestore.collection(db, TRANSACTIONS), firestore.where('tenantId', '==', tenantId), firestore.orderBy('createdAt', 'desc'));
 
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as InventoryTransaction) }));
+  const snap = await firestore.getDocs(q);
+  return snap.docs.map((d: any) => ({ id: d.id, ...(d.data() as InventoryTransaction) }));
 }

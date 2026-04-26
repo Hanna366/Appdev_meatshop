@@ -6,6 +6,7 @@ import {
   fetchBatchesByProduct,
   fetchInventoryByTenantWithProducts,
   stockInProduct,
+  fetchInventoryTransactions,
 } from '../../src/features/inventory/services/inventoryService';
 import { useTenantStore } from '../../src/features/tenant/store/useTenantStore';
 import { useAuthStore } from '../../src/features/auth/store/useAuthStore';
@@ -85,7 +86,32 @@ export default function StockInRoute() {
         });
       }
 
-      const summaries = await fetchInventoryByTenantWithProducts(tenantId);
+      // Optimistic UI update: increment local summary for this product so user sees immediate feedback
+      try {
+        const prev = useInventoryStore.getState().summaries || [];
+        if (prev.length > 0) {
+          const updated = prev.map((s: any) =>
+            s.productId === String(productId)
+              ? { ...s, totalQuantity: (Number(s.totalQuantity) || 0) + qty, batchesCount: (Number(s.batchesCount) || 0) + 1 }
+              : s,
+          );
+          useInventoryStore.getState().setSummaries(updated as any);
+        }
+      } catch (e) {
+        // ignore optimistic update failures
+      }
+
+      // Show success feedback with the latest transaction id, then refresh authoritative summaries and go back
+      const txs = await fetchInventoryTransactions(tenantId, String(productId)).catch(() => []);
+      const txId = txs && txs.length > 0 ? txs[0].id : null;
+      const msg = txId ? `Stock recorded (tx: ${txId})` : 'Stock recorded';
+      if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+        (window as any).alert(msg);
+      } else {
+        Alert.alert('Received', msg);
+      }
+
+      const summaries = await fetchInventoryByTenantWithProducts(tenantId).catch(() => []);
       if (summaries.length === 0) {
         const inventoryService = await import('../../src/features/inventory/services/inventoryService');
         const fallbackSummaries = await inventoryService.fetchInventoryFromProducts(tenantId);
@@ -96,7 +122,12 @@ export default function StockInRoute() {
 
       router.back();
     } catch (error: any) {
-      Alert.alert('Failed', String(error?.message ?? error));
+      const errMsg = String(error?.message ?? error);
+      if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+        (window as any).alert(`Failed: ${errMsg}`);
+      } else {
+        Alert.alert('Failed', errMsg);
+      }
     } finally {
       setSubmitting(false);
     }

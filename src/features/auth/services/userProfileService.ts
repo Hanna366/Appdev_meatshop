@@ -6,15 +6,21 @@ import type { User } from '../types/authTypes';
  */
 export async function loadUserProfile(uid: string): Promise<Partial<User> | null> {
   try {
-    const { getFirestore, doc, getDoc, setDoc } = await import('firebase/firestore');
-    const db = getFirestore();
-    const ref = doc(db, 'users', uid);
-    const snap = await getDoc(ref);
+    const { getDb } = await import('../../../lib/firebase');
+    const db = await getDb();
+    if (!db) return null;
+    const firestore: any = await import('firebase/firestore');
+    const ref = firestore.doc(db, 'users', uid);
+    const snap = await firestore.getDoc(ref);
     if (!snap.exists()) {
       // Auto-provision a minimal profile for new users so the app has tenant/role.
       const defaultProfile: Partial<User> = { tenantId: 'tn_001', role: 'manager' as User['role'], name: '' };
       try {
-        await setDoc(ref, defaultProfile);
+        try {
+          await firestore.setDoc(ref, defaultProfile);
+        } catch (e) {
+          // ignore write failures
+        }
       } catch (e) {
         // ignore write failures (security rules may prevent auto-creation)
       }
