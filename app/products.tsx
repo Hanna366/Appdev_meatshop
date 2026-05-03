@@ -1,18 +1,32 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { LockedFeatureNotice } from '../src/components/ui/LockedFeatureNotice';
 import { hasPermission } from '../src/features/access/services/accessControl';
 import { useAuditLogStore } from '../src/features/audit/store/useAuditLogStore';
 import { useAuthStore } from '../src/features/auth/store/useAuthStore';
+import {
+  createProduct,
+  deleteProduct,
+  fetchProductsByTenant,
+  updateProduct,
+} from '../src/features/product/services/productService';
 import { useProductStore } from '../src/features/product/store/useProductStore';
+import type { Product, ProductType } from '../src/features/product/types/productTypes';
 import { evaluateEntitlement } from '../src/features/subscription/services/entitlementService';
 import { guardSubscriptionAccess } from '../src/features/subscription/services/subscriptionGuard';
 import { useSubscriptionStore } from '../src/features/subscription/store/useSubscriptionStore';
-import { useSyncQueueStore } from '../src/features/sync/store/useSyncQueueStore';
 import { useTenantStore } from '../src/features/tenant/store/useTenantStore';
-import type { Product, ProductType } from '../src/features/product/types/productTypes';
-import { fetchProductsByTenant } from '../src/features/product/services/productService';
 
 const FILTERS: Array<'All' | ProductType> = [
   'All',
@@ -23,38 +37,45 @@ const FILTERS: Array<'All' | ProductType> = [
   'Byproduct',
 ];
 
-const SEED_PRODUCTS: Product[] = [
-  { id: 'prd_1', name: 'Ribeye Steak', type: 'Prime', unit: 'kg', price: 39.5, stock: 16 },
-  { id: 'prd_2', name: 'Tenderloin', type: 'Premium', unit: 'kg', price: 42, stock: 11 },
-  { id: 'prd_3', name: 'Sirloin', type: 'Select', unit: 'kg', price: 28.75, stock: 20 },
-  { id: 'prd_4', name: 'Chuck Roast', type: 'Choice', unit: 'kg', price: 19.25, stock: 26 },
-  { id: 'prd_5', name: 'Beef Liver', type: 'Byproduct', unit: 'kg', price: 8.5, stock: 34 },
-  { id: 'prd_6', name: 'Short Ribs', type: 'Prime', unit: 'kg', price: 31, stock: 14 },
-  { id: 'prd_7', name: 'Brisket', type: 'Premium', unit: 'kg', price: 26.4, stock: 18 },
-  { id: 'prd_8', name: 'Ground Beef', type: 'Choice', unit: 'kg', price: 14.9, stock: 40 },
-];
+const PRODUCT_TYPES: ProductType[] = ['Prime', 'Premium', 'Select', 'Choice', 'Byproduct'];
 
 const PRIMARY = '#B23A1D';
+
+type ProductFormState = {
+  name: string;
+  type: ProductType;
+  price: string;
+  stock: string;
+};
+
+const EMPTY_FORM: ProductFormState = {
+  name: '',
+  type: 'Choice',
+  price: '',
+  stock: '0',
+};
 
 export default function ProductsScreen() {
   const user = useAuthStore((state) => state.user);
   const activeTenantId = useTenantStore((state) => state.activeTenantId);
   const products = useProductStore((state) => state.products);
   const setProducts = useProductStore((state) => state.setProducts);
-  const enqueueSync = useSyncQueueStore((state) => state.enqueue);
-  const queueSize = useSyncQueueStore((state) => state.queue.length);
   const appendAuditEvent = useAuditLogStore((state) => state.appendEvent);
   const subscriptionsByTenantId = useSubscriptionStore((state) => state.subscriptionsByTenantId);
   const usageByTenantId = useSubscriptionStore((state) => state.usageByTenantId);
-  const incrementUsage = useSubscriptionStore((state) => state.incrementUsage);
+  const patchUsage = useSubscriptionStore((state) => state.patchUsage);
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'All' | ProductType>('All');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
 
   const canViewProducts = hasPermission(user?.role, 'products.view');
+  const canEditProducts = hasPermission(user?.role, 'products.edit');
   const subscription = activeTenantId ? subscriptionsByTenantId[activeTenantId] : undefined;
   const usage = activeTenantId ? usageByTenantId[activeTenantId] : undefined;
   const catalogEntitlement =
@@ -70,18 +91,33 @@ export default function ProductsScreen() {
           message: 'No subscription found for this tenant. Attach a plan to continue.',
         };
 
+  const selectedProduct = useMemo(
+    () => products.find((product) => product.id === selectedId) ?? null,
+    [products, selectedId],
+  );
+
   useEffect(() => {
     let mounted = true;
 
     async function load() {
-      if (!activeTenantId || !canViewProducts || !catalogEntitlement.allowed) return;
+      if (!activeTenantId || !canViewProducts || !catalogEntitlement.allowed) {
+        if (mounted) {
+          setProducts([]);
+          setSelectedId(null);
+          setLoading(false);
+          setError(null);
+        }
+        return;
+      }
 
       setLoading(true);
       setError(null);
       try {
         const remoteProducts = await fetchProductsByTenant(activeTenantId);
         if (!mounted) return;
+
         setProducts(remoteProducts);
+        patchUsage(activeTenantId, { productsCount: remoteProducts.length });
 
         if (user) {
           appendAuditEvent({
@@ -108,12 +144,41 @@ export default function ProductsScreen() {
     };
   }, [
     activeTenantId,
+    appendAuditEvent,
     canViewProducts,
     catalogEntitlement.allowed,
+    patchUsage,
     setProducts,
-    appendAuditEvent,
     user,
   ]);
+
+  useEffect(() => {
+    if (!selectedProduct) {
+      setForm(EMPTY_FORM);
+      return;
+    }
+
+    setForm({
+      name: selectedProduct.name,
+      type: selectedProduct.type ?? 'Choice',
+      price: String(selectedProduct.price),
+      stock: String(selectedProduct.stock ?? 0),
+    });
+  }, [selectedProduct]);
+
+  const visibleProducts = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+
+    return [...products]
+      .filter((product) => {
+        const productType = product.type ?? 'Choice';
+        const matchesFilter = activeFilter === 'All' ? true : productType === activeFilter;
+        const matchesSearch =
+          normalized.length === 0 ? true : product.name.toLowerCase().includes(normalized);
+        return matchesFilter && matchesSearch;
+      })
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }, [activeFilter, products, query]);
 
   if (!canViewProducts) {
     return (
@@ -142,24 +207,321 @@ export default function ProductsScreen() {
     );
   }
 
-  const visibleProducts = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+  function clearSelection() {
+    setSelectedId(null);
+    setForm(EMPTY_FORM);
+  }
 
-    return products.filter((product) => {
-      const productType = product.type ?? 'Choice';
-      const matchesFilter = activeFilter === 'All' ? true : productType === activeFilter;
-      const matchesSearch =
-        normalized.length === 0 ? true : product.name.toLowerCase().includes(normalized);
-      return matchesFilter && matchesSearch;
-    });
-  }, [activeFilter, products, query]);
+  function validateForm(): Omit<Product, 'id'> | null {
+    const name = form.name.trim();
+    if (!name) {
+      Alert.alert('Name required', 'Enter a product name before saving.');
+      return null;
+    }
+
+    const parsedPrice = Number(form.price);
+    if (!form.price.trim() || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      Alert.alert('Invalid price', 'Price must be a valid number greater than or equal to 0.');
+      return null;
+    }
+
+    const parsedStock = form.stock.trim() === '' ? 0 : Number(form.stock);
+    if (!Number.isFinite(parsedStock) || parsedStock < 0) {
+      Alert.alert('Invalid stock', 'Stock must be a valid number greater than or equal to 0.');
+      return null;
+    }
+
+    return {
+      name,
+      type: form.type,
+      unit: 'kg',
+      price: parsedPrice,
+      stock: parsedStock,
+    };
+  }
+
+  async function refreshProducts() {
+    if (!activeTenantId) return;
+
+    setRefreshing(true);
+    setError(null);
+    try {
+      const remoteProducts = await fetchProductsByTenant(activeTenantId);
+      setProducts(remoteProducts);
+      patchUsage(activeTenantId, { productsCount: remoteProducts.length });
+
+      if (user) {
+        appendAuditEvent({
+          id: `audit_${Date.now()}`,
+          tenantId: activeTenantId,
+          userId: user.id,
+          action: 'products.fetch',
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (err: any) {
+      setError(err?.message ? String(err.message) : 'Failed to load products');
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!canEditProducts) {
+      Alert.alert('Read only', 'Your role can view products but cannot change them.');
+      return;
+    }
+
+    if (!activeTenantId) {
+      Alert.alert('No tenant selected', 'Please select an active tenant first.');
+      return;
+    }
+
+    const payload = validateForm();
+    if (!payload) {
+      return;
+    }
+
+    if (!selectedProduct) {
+      if (!subscription || !usage) {
+        Alert.alert('Subscription unavailable', 'No active subscription data was found for this tenant.');
+        return;
+      }
+
+      const canAddProduct = guardSubscriptionAccess({
+        subscription,
+        usage,
+        requiredLimit: 'maxProducts',
+        unitsToAdd: 1,
+        onDenied: (decision) => {
+          if (user) {
+            appendAuditEvent({
+              id: `audit_${Date.now()}`,
+              tenantId: activeTenantId,
+              userId: user.id,
+              action: 'subscription.limit_blocked',
+              createdAt: new Date().toISOString(),
+              meta: {
+                reason: decision.reason ?? 'unknown',
+                requiredPlan: decision.requiredPlan ?? 'none',
+              },
+            });
+          }
+        },
+      });
+
+      if (!canAddProduct) {
+        return;
+      }
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      if (selectedProduct) {
+        await updateProduct(selectedProduct.id, payload);
+        const nextProducts = products.map((product) =>
+          product.id === selectedProduct.id ? { ...product, ...payload } : product,
+        );
+        setProducts(nextProducts);
+        Alert.alert('Updated', 'Product changes were saved.');
+      } else {
+        const productId = await createProduct(activeTenantId, payload);
+        const nextProduct: Product = { id: productId, ...payload };
+        const nextProducts = [nextProduct, ...products];
+        setProducts(nextProducts);
+        patchUsage(activeTenantId, { productsCount: nextProducts.length });
+        setSelectedId(productId);
+        Alert.alert('Created', 'New product added to the catalog.');
+      }
+    } catch (err: any) {
+      const message = err?.message ? String(err.message) : 'Failed to save product';
+      setError(message);
+      Alert.alert('Failed', message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function performDelete(product: Product) {
+    if (!activeTenantId) {
+      Alert.alert('No tenant selected', 'Please select an active tenant first.');
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteProduct(product.id);
+      const nextProducts = products.filter((item) => item.id !== product.id);
+      setProducts(nextProducts);
+      patchUsage(activeTenantId, { productsCount: nextProducts.length });
+      clearSelection();
+      Alert.alert('Deleted', 'Product removed from the catalog.');
+    } catch (err: any) {
+      const message = err?.message ? String(err.message) : 'Failed to delete product';
+      setError(message);
+      Alert.alert('Failed', message);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function requestDelete() {
+    if (!selectedProduct) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete product?',
+      `Remove ${selectedProduct.name} from the catalog? Inventory history may still reference this item.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void performDelete(selectedProduct);
+          },
+        },
+      ],
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerBlock}>
-        <Text style={styles.title}>Product Selection</Text>
-        <Text style={styles.subtitle}>Choose an item to add to the current sale</Text>
-        <Text style={styles.queueText}>Pending sync actions: {queueSize}</Text>
+        <Text style={styles.title}>Products</Text>
+        <Text style={styles.subtitle}>Create, view, update, and delete catalog items.</Text>
+
+        {canEditProducts ? (
+          <View style={styles.formCard}>
+            <View style={styles.formHeader}>
+              <View>
+                <Text style={styles.formTitle}>
+                  {selectedProduct ? 'Edit Product' : 'Add Product'}
+                </Text>
+                <Text style={styles.formMeta}>
+                  {selectedProduct
+                    ? 'Select a different item below or update the fields here.'
+                    : 'Fill in the form and save to create a new product.'}
+                </Text>
+              </View>
+              {selectedProduct ? (
+                <Pressable onPress={clearSelection} style={styles.ghostButton}>
+                  <Text style={styles.ghostButtonText}>New</Text>
+                </Pressable>
+              ) : null}
+            </View>
+
+            <Text style={styles.fieldLabel}>Product Name</Text>
+            <TextInput
+              value={form.name}
+              onChangeText={(name) => setForm((current) => ({ ...current, name }))}
+              placeholder="e.g. Ribeye Steak"
+              placeholderTextColor="#8A8A8A"
+              style={styles.input}
+            />
+
+            <Text style={styles.fieldLabel}>Type</Text>
+            <FlatList
+              data={PRODUCT_TYPES}
+              horizontal
+              keyExtractor={(item) => item}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.typeSelector}
+              renderItem={({ item }) => {
+                const isActive = form.type === item;
+
+                return (
+                  <Pressable
+                    onPress={() => setForm((current) => ({ ...current, type: item }))}
+                    style={[styles.chip, isActive && styles.chipActive]}
+                  >
+                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{item}</Text>
+                  </Pressable>
+                );
+              }}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.rowField}>
+                <Text style={styles.fieldLabel}>Price</Text>
+                <TextInput
+                  value={form.price}
+                  onChangeText={(price) => setForm((current) => ({ ...current, price }))}
+                  placeholder="0.00"
+                  placeholderTextColor="#8A8A8A"
+                  keyboardType="numeric"
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.rowField}>
+                <Text style={styles.fieldLabel}>Stock</Text>
+                <TextInput
+                  value={form.stock}
+                  onChangeText={(stock) => setForm((current) => ({ ...current, stock }))}
+                  placeholder="0"
+                  placeholderTextColor="#8A8A8A"
+                  keyboardType="numeric"
+                  style={styles.input}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.fieldHint}>Unit is currently fixed to kilograms (`kg`).</Text>
+
+            <View style={styles.actionRow}>
+              <Pressable
+                onPress={() => {
+                  void handleSave();
+                }}
+                disabled={saving || deleting}
+                style={[styles.primaryButton, (saving || deleting) && styles.buttonDisabled]}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {selectedProduct
+                    ? saving
+                      ? 'Saving...'
+                      : 'Update Product'
+                    : saving
+                      ? 'Creating...'
+                      : 'Create Product'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={clearSelection}
+                disabled={saving || deleting}
+                style={[styles.secondaryButton, (saving || deleting) && styles.buttonDisabled]}
+              >
+                <Text style={styles.secondaryButtonText}>
+                  {selectedProduct ? 'Cancel Edit' : 'Clear Form'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={requestDelete}
+                disabled={!selectedProduct || saving || deleting}
+                style={[
+                  styles.deleteButton,
+                  (!selectedProduct || saving || deleting) && styles.buttonDisabled,
+                ]}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.readOnlyCard}>
+            <Text style={styles.readOnlyTitle}>Read Only</Text>
+            <Text style={styles.readOnlyText}>
+              Your role can view items but cannot create, edit, or delete products.
+            </Text>
+          </View>
+        )}
 
         <TextInput
           value={query}
@@ -189,90 +551,22 @@ export default function ProductsScreen() {
           }}
         />
 
-        <Pressable
-          onPress={() => {
-            if (!user || !activeTenantId) {
-              return;
-            }
+        <Text style={styles.catalogMeta}>
+          Showing {visibleProducts.length} of {products.length} products
+        </Text>
 
-            enqueueSync({
-              id: `sync_${Date.now()}`,
-              tenantId: activeTenantId,
-              entity: 'product',
-              operation: 'update',
-              payload: { reason: 'supplier_price_import_refresh' },
-              queuedAt: new Date().toISOString(),
-            });
-
-            appendAuditEvent({
-              id: `audit_${Date.now()}`,
-              tenantId: activeTenantId,
-              userId: user.id,
-              action: 'sync.enqueue',
-              createdAt: new Date().toISOString(),
-              meta: { entity: 'product' },
-            });
-          }}
-          style={styles.syncButton}
-        >
-          <Text style={styles.syncButtonText}>Queue Supplier Price Sync</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => {
-            if (!activeTenantId || !subscription || !usage) {
-              return;
-            }
-
-            const canAddProduct = guardSubscriptionAccess({
-              subscription,
-              usage,
-              requiredLimit: 'maxProducts',
-              unitsToAdd: 1,
-              onDenied: (decision) => {
-                if (user) {
-                      appendAuditEvent({
-                        id: `audit_${Date.now()}`,
-                        tenantId: activeTenantId,
-                        userId: user.id,
-                        action: 'subscription.limit_blocked',
-                        createdAt: new Date().toISOString(),
-                        meta: {
-                          reason: decision.reason ?? 'unknown',
-                          requiredPlan: decision.requiredPlan ?? 'none',
-                        },
-                      });
-                }
-              },
-            });
-
-            if (!canAddProduct) {
-              return;
-            }
-
-            const product: Product = {
-              id: `prd_${Date.now()}`,
-              name: `New Product ${products.length + 1}`,
-              type: 'Choice',
-              unit: 'kg',
-              price: 10,
-              stock: 0,
-            };
-
-            setProducts([...products, product]);
-            incrementUsage(activeTenantId, 'productsCount', 1);
-          }}
-          style={styles.syncButton}
-        >
-          <Text style={styles.syncButtonText}>Add Demo Product (Limit Enforced)</Text>
-        </Pressable>
-        {loading && (
-          <View style={{ marginTop: 12 }}>
+        {loading ? (
+          <View style={styles.loadingState}>
             <ActivityIndicator size="small" color={PRIMARY} />
-            <Text style={{ marginTop: 6, color: '#6A655B' }}>Loading products...</Text>
+            <Text style={styles.loadingText}>Loading products...</Text>
           </View>
-        )}
-        {/* error UI removed per request (errors are still logged to console) */}
+        ) : null}
+
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
       </View>
 
       <FlatList
@@ -281,27 +575,8 @@ export default function ProductsScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshing={refreshing}
-        onRefresh={async () => {
-          if (!activeTenantId) return;
-          setRefreshing(true);
-          setError(null);
-          try {
-            const remoteProducts = await fetchProductsByTenant(activeTenantId);
-            setProducts(remoteProducts);
-            if (user) {
-              appendAuditEvent({
-                id: `audit_${Date.now()}`,
-                tenantId: activeTenantId,
-                userId: user.id,
-                action: 'products.fetch',
-                createdAt: new Date().toISOString(),
-              });
-            }
-          } catch (err: any) {
-            setError(err?.message ? String(err.message) : 'Failed to load products');
-          } finally {
-            setRefreshing(false);
-          }
+        onRefresh={() => {
+          void refreshProducts();
         }}
         ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
         renderItem={({ item }) => {
@@ -320,9 +595,13 @@ export default function ProductsScreen() {
               </View>
 
               <View style={styles.cardBottomRow}>
-                <Text style={styles.metaText}>Unit: {item.unit ?? 'kg'}</Text>
+                <Text style={styles.metaText}>
+                  Stock: {item.stock ?? 0} {item.unit ?? 'kg'}
+                </Text>
                 <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
               </View>
+
+              {isSelected ? <Text style={styles.selectedText}>Selected for editing</Text> : null}
             </Pressable>
           );
         }}
@@ -357,11 +636,136 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6A655B',
   },
-  queueText: {
-    marginTop: 2,
-    marginBottom: 8,
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5DED1',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+  },
+  formHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  formTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F1C17',
+  },
+  formMeta: {
+    marginTop: 4,
     fontSize: 13,
     color: '#6A655B',
+  },
+  fieldLabel: {
+    marginTop: 12,
+    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#383127',
+  },
+  input: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5DED1',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1F1C17',
+  },
+  fieldHint: {
+    marginTop: 10,
+    fontSize: 12,
+    color: '#6A655B',
+  },
+  typeSelector: {
+    paddingTop: 2,
+    paddingBottom: 2,
+    gap: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  rowField: {
+    flex: 1,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+    flexWrap: 'wrap',
+  },
+  primaryButton: {
+    backgroundColor: PRIMARY,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D9D0C2',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  secondaryButtonText: {
+    color: '#4D463A',
+    fontWeight: '700',
+  },
+  deleteButton: {
+    backgroundColor: '#FFF1EC',
+    borderWidth: 1,
+    borderColor: '#F2D2C6',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  deleteButtonText: {
+    color: '#A23821',
+    fontWeight: '700',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  ghostButton: {
+    backgroundColor: '#F3EFE7',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  ghostButtonText: {
+    color: '#4D463A',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  readOnlyCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5DED1',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+  },
+  readOnlyTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1F1C17',
+  },
+  readOnlyText: {
+    marginTop: 6,
+    fontSize: 14,
+    color: '#6A655B',
+    lineHeight: 20,
   },
   searchInput: {
     backgroundColor: '#FFFFFF',
@@ -397,6 +801,33 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: '#FFFFFF',
+  },
+  catalogMeta: {
+    marginTop: 10,
+    fontSize: 13,
+    color: '#6A655B',
+  },
+  loadingState: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginLeft: 8,
+    color: '#6A655B',
+  },
+  errorBanner: {
+    marginTop: 12,
+    backgroundColor: '#FFF1EC',
+    borderWidth: 1,
+    borderColor: '#F2D2C6',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  errorText: {
+    color: '#A23821',
+    fontSize: 13,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -452,6 +883,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
   },
   metaText: {
     fontSize: 14,
@@ -462,6 +894,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     color: PRIMARY,
+  },
+  selectedText: {
+    marginTop: 10,
+    color: PRIMARY,
+    fontWeight: '700',
+    fontSize: 12,
   },
   emptyState: {
     paddingVertical: 28,
@@ -488,20 +926,5 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
     color: '#6C6659',
-  },
-  syncButton: {
-    marginTop: 10,
-    alignSelf: 'flex-start',
-    backgroundColor: '#E9F2FF',
-    borderWidth: 1,
-    borderColor: '#C8DCF9',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  syncButtonText: {
-    color: '#2B4E86',
-    fontWeight: '600',
-    fontSize: 13,
   },
 });

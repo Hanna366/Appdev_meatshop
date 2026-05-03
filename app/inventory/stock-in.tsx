@@ -3,9 +3,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   createStockIn,
-  fetchBatchesByProduct,
   fetchInventoryByTenantWithProducts,
-  stockInProduct,
   fetchInventoryTransactions,
 } from '../../src/features/inventory/services/inventoryService';
 import { useTenantStore } from '../../src/features/tenant/store/useTenantStore';
@@ -61,30 +59,28 @@ export default function StockInRoute() {
       return Alert.alert('Invalid quantity', 'Quantity must be a positive number.');
     }
 
+    const trimmedExpiry = expiry.trim();
+    if (trimmedExpiry && !/^\d{4}-\d{2}-\d{2}$/.test(trimmedExpiry)) {
+      return Alert.alert('Invalid expiry', 'Use the YYYY-MM-DD format for expiry.');
+    }
+
+    const trimmedCost = cost.trim();
+    const parsedCost = trimmedCost === '' ? undefined : Number(trimmedCost);
+    if (trimmedCost && (parsedCost === undefined || !Number.isFinite(parsedCost) || parsedCost < 0)) {
+      return Alert.alert('Invalid cost', 'Cost must be a valid number greater than or equal to 0.');
+    }
+
     setSubmitting(true);
     try {
-      const batches = await fetchBatchesByProduct(tenantId, String(productId));
-      if (batches.length > 0) {
-        await createStockIn({
-          tenantId,
-          productId: String(productId),
-          quantity: qty,
-          cost: cost ? Number(cost) : undefined,
-          expiryDate: expiry || null,
-          userId: user?.id,
-          notes: 'stock-in via app',
-        });
-      } else {
-        await stockInProduct({
-          tenantId,
-          productId: String(productId),
-          quantity: qty,
-          cost: cost ? Number(cost) : undefined,
-          expiryDate: expiry || null,
-          userId: user?.id,
-          notes: 'stock-in via app',
-        });
-      }
+      await createStockIn({
+        tenantId,
+        productId: String(productId),
+        quantity: qty,
+        cost: parsedCost,
+        expiryDate: trimmedExpiry || null,
+        userId: user?.id,
+        notes: 'stock-in via app',
+      });
 
       // Optimistic UI update: increment local summary for this product so user sees immediate feedback
       try {
@@ -105,6 +101,13 @@ export default function StockInRoute() {
       const txs = await fetchInventoryTransactions(tenantId, String(productId)).catch(() => []);
       const txId = txs && txs.length > 0 ? txs[0].id : null;
       const msg = txId ? `Stock recorded (tx: ${txId})` : 'Stock recorded';
+      // Also log to Metro / browser console so we can watch the transaction id in logs
+      try {
+        // eslint-disable-next-line no-console
+        console.log('Stock In completed, txId=', txId);
+      } catch (e) {
+        // ignore
+      }
       if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
         (window as any).alert(msg);
       } else {

@@ -29,11 +29,11 @@ const STATUS_OPTIONS: SubscriptionStatus[] = [
   'expired',
 ];
 
-const PLAN_PRICES: Record<PlanId, number> = {
-  basic: 999,
-  standard: 1999,
-  premium: 3499,
-  enterprise: 8999,
+const PLAN_PRICES: Record<PlanId, string> = {
+  basic: '$29',
+  standard: '$79',
+  premium: '$149',
+  enterprise: 'Custom',
 };
 
 const MOST_POPULAR_PLAN: PlanId = 'standard';
@@ -57,6 +57,10 @@ function getPlanCtaLabel(currentPlan: PlanDefinition, targetPlan: PlanDefinition
 
 function formatLimit(value: number | null): string {
   return value === null ? 'Unlimited' : String(value);
+}
+
+function getPlanPeriodLabel(planId: PlanId): string {
+  return planId === 'enterprise' ? 'Pricing' : '/month';
 }
 
 // ── Bottom Tab Bar ────────────────────────────────────────────────────────────
@@ -231,14 +235,18 @@ export default function PlansScreen() {
                   
                   <View style={styles.priceWrap}>
                     <Text style={styles.priceText}>₱{PLAN_PRICES[plan.id].toLocaleString()}</Text>
-                    <Text style={styles.pricePeriod}>/month</Text>
+                    <Text style={styles.priceValueText}>{PLAN_PRICES[plan.id]}</Text>
+                    <Text style={styles.pricePeriod}>{getPlanPeriodLabel(plan.id)}</Text>
                   </View>
 
                   <View style={styles.featureList}>
                     <FeatureItem label="Point of Sale" enabled={plan.entitlements.featureFlags.canUsePOS} />
-                    <FeatureItem label="Export Reports" enabled={plan.entitlements.featureFlags.canExportReports} />
-                    <FeatureItem label="Offline Mode" enabled={plan.entitlements.featureFlags.canUseOfflineMode} />
-                    <FeatureItem label="Multi-branch" enabled={plan.entitlements.featureFlags.canUseMultiBranch} />
+                    <FeatureItem label="Suppliers & Customers" enabled={plan.entitlements.featureFlags.canManageSuppliers && plan.entitlements.featureFlags.canManageCustomers} />
+                    <FeatureItem label="Purchase Orders" enabled={plan.entitlements.featureFlags.canManagePurchaseOrders} />
+                    <FeatureItem label="Report Export" enabled={plan.entitlements.featureFlags.canExportReports} />
+                    <FeatureItem label="Offline POS" enabled={plan.entitlements.featureFlags.canUseOfflineMode} />
+                    <FeatureItem label="Advanced Analytics" enabled={plan.entitlements.featureFlags.canUseAdvancedAnalytics} />
+                    <FeatureItem label="Custom Branding" enabled={plan.entitlements.featureFlags.canUseCustomBranding} />
                   </View>
 
                   <View style={styles.limitWrap}>
@@ -272,7 +280,7 @@ export default function PlansScreen() {
       <BottomTabBar
         onDashboard={() => router.push('/dashboard')}
         onInventory={() => router.push('/inventory')}
-        onReports={() => {}}
+        onReports={() => router.push('/reports')}
       />
     </SafeAreaView>
   );
@@ -480,6 +488,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   priceText: {
+    display: 'none',
+  },
+  priceValueText: {
     fontSize: 28,
     fontWeight: '800',
     color: MAROON_DARK,

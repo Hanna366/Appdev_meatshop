@@ -10,13 +10,21 @@ import type {
 } from '../types/subscriptionTypes';
 
 const FEATURE_PLAN_REQUIREMENT: Record<FeatureFlag, PlanId> = {
-  canUsePOS: 'basic',
+  canUsePOS: 'standard',
   canExportReports: 'standard',
   canManageProducts: 'basic',
   canUseOfflineMode: 'standard',
   canViewAuditLogs: 'standard',
   canManageUsers: 'standard',
   canUseMultiBranch: 'premium',
+  canManageSuppliers: 'standard',
+  canManageCustomers: 'standard',
+  canManagePurchaseOrders: 'standard',
+  canUseAdvancedAnalytics: 'premium',
+  canAccessAPI: 'premium',
+  canUseCustomBranding: 'premium',
+  canUseSmsNotifications: 'premium',
+  canUseBatchOperations: 'premium',
 };
 
 const LIMIT_PLAN_REQUIREMENT: Record<LimitKey, PlanId> = {

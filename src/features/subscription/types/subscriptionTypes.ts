@@ -15,7 +15,15 @@ export type FeatureFlag =
   | 'canUseOfflineMode'
   | 'canViewAuditLogs'
   | 'canManageUsers'
-  | 'canUseMultiBranch';
+  | 'canUseMultiBranch'
+  | 'canManageSuppliers'
+  | 'canManageCustomers'
+  | 'canManagePurchaseOrders'
+  | 'canUseAdvancedAnalytics'
+  | 'canAccessAPI'
+  | 'canUseCustomBranding'
+  | 'canUseSmsNotifications'
+  | 'canUseBatchOperations';
 
 export type LimitKey = 'maxUsers' | 'maxProducts' | 'maxMonthlyTransactions' | 'maxBranches';
 

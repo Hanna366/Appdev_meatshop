@@ -315,7 +315,7 @@ export default function InventoryListScreen() {
       <BottomTabBar
         onDashboard={() => router.push('/dashboard')}
         onPlans={() => router.push('/plans')}
-        onReports={() => {}}
+        onReports={() => router.push('/reports')}
       />
     </SafeAreaView>
   );

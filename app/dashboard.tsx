@@ -103,9 +103,11 @@ function ToolCard({
 function BottomTabBar({
   onPlans,
   onInventory,
+  onReports,
 }: {
   onPlans: () => void;
   onInventory: () => void;
+  onReports: () => void;
 }) {
   return (
     <View style={tabStyles.tabBar}>
@@ -121,7 +123,7 @@ function BottomTabBar({
         <Text style={tabStyles.tabIcon}>🥩</Text>
         <Text style={tabStyles.tabLabel}>Inventory</Text>
       </Pressable>
-      <Pressable style={tabStyles.tab}>
+      <Pressable style={tabStyles.tab} onPress={onReports}>
         <Text style={tabStyles.tabIcon}>📊</Text>
         <Text style={tabStyles.tabLabel}>Reports</Text>
       </Pressable>
@@ -301,10 +303,22 @@ export default function DashboardScreen() {
           onPress={() => router.push('/inventory')}
         />
         <ToolCard
+          icon="POS"
+          label="POS Checkout"
+          description="Process weight-based meat sales"
+          onPress={() => router.push('/pos')}
+        />
+        <ToolCard
+          icon="OPS"
+          label="Operations"
+          description="Handle suppliers, customers, and receiving"
+          onPress={() => router.push('/operations')}
+        />
+        <ToolCard
           icon="📄"
           label="Export Reports"
           description="Generate and export business reports"
-          onPress={() => { }}
+          onPress={() => router.push('/reports')}
         />
       </View>
 
@@ -338,7 +352,7 @@ export default function DashboardScreen() {
             <SideNavItem
               icon="▲"
               label="Export Reports"
-              onPress={() => { }}
+              onPress={() => router.push('/reports')}
             />
           </View>
 
@@ -391,6 +405,7 @@ export default function DashboardScreen() {
       <BottomTabBar
         onPlans={() => router.push('/plans')}
         onInventory={() => router.push('/inventory')}
+        onReports={() => router.push('/reports')}
       />
     </SafeAreaView>
   );

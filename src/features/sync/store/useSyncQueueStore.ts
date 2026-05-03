@@ -8,6 +8,7 @@ type SyncQueueState = {
   queue: SyncQueueItem[];
   enqueue: (item: SyncQueueItem) => void;
   dequeue: () => SyncQueueItem | null;
+  setQueue: (items: SyncQueueItem[]) => void;
   clearQueue: () => void;
 };
 
@@ -28,6 +29,9 @@ export const useSyncQueueStore = create<SyncQueueState>()(
 
         set({ queue: rest });
         return first;
+      },
+      setQueue: (items) => {
+        set({ queue: items });
       },
       clearQueue: () => {
         set({ queue: [] });
