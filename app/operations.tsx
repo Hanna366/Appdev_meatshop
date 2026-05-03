@@ -14,12 +14,24 @@ import {
 import { LockedFeatureNotice } from '../src/components/ui/LockedFeatureNotice';
 import { hasPermission } from '../src/features/access/services/accessControl';
 import { useAuthStore } from '../src/features/auth/store/useAuthStore';
+import {
+  createBusinessContact,
+  deleteBusinessContact,
+  fetchContactsByTenant,
+  updateBusinessContact,
+} from '../src/features/contact/services/contactService';
 import { useContactStore } from '../src/features/contact/store/useContactStore';
 import type { BusinessContact, ContactKind } from '../src/features/contact/types/contactTypes';
 import { createStockIn } from '../src/features/inventory/services/inventoryService';
 import { useInventoryStore } from '../src/features/inventory/store/useInventoryStore';
 import { fetchProductsByTenant } from '../src/features/product/services/productService';
 import { useProductStore } from '../src/features/product/store/useProductStore';
+import {
+  createPurchaseOrder,
+  deletePurchaseOrder,
+  fetchPurchaseOrdersByTenant,
+  updatePurchaseOrder,
+} from '../src/features/purchase/services/purchaseService';
 import { usePurchaseStore } from '../src/features/purchase/store/usePurchaseStore';
 import type { PurchaseOrder } from '../src/features/purchase/types/purchaseTypes';
 import { evaluateEntitlement } from '../src/features/subscription/services/entitlementService';
@@ -77,9 +89,11 @@ export default function OperationsScreen() {
   const products = useProductStore((state) => state.products);
   const setProducts = useProductStore((state) => state.setProducts);
   const contacts = useContactStore((state) => state.contacts);
+  const setContacts = useContactStore((state) => state.setContacts);
   const upsertContact = useContactStore((state) => state.upsertContact);
   const removeContact = useContactStore((state) => state.removeContact);
   const purchases = usePurchaseStore((state) => state.purchases);
+  const setPurchases = usePurchaseStore((state) => state.setPurchases);
   const upsertPurchase = usePurchaseStore((state) => state.upsertPurchase);
   const removePurchase = usePurchaseStore((state) => state.removePurchase);
   const summaries = useInventoryStore((state) => state.summaries);
@@ -164,6 +178,37 @@ export default function OperationsScreen() {
     };
   }, [products.length, setProducts, tenantId]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadOperationsData() {
+      if (!tenantId) {
+        return;
+      }
+
+      try {
+        const [remoteContacts, remotePurchases] = await Promise.all([
+          fetchContactsByTenant(tenantId),
+          fetchPurchaseOrdersByTenant(tenantId),
+        ]);
+
+        if (!mounted) {
+          return;
+        }
+
+        setContacts(remoteContacts);
+        setPurchases(remotePurchases);
+      } catch (error) {
+        console.warn('Failed to load operations data', error);
+      }
+    }
+
+    void loadOperationsData();
+    return () => {
+      mounted = false;
+    };
+  }, [setContacts, setPurchases, tenantId]);
+
   const suppliers = useMemo(
     () => contacts.filter((contact) => contact.tenantId === tenantId && contact.kind === 'supplier'),
     [contacts, tenantId],
@@ -227,7 +272,7 @@ export default function OperationsScreen() {
     setPurchaseForm(EMPTY_PURCHASE_FORM);
   }
 
-  function saveContact() {
+  async function saveContact() {
     if (!tenantId) {
       Alert.alert('No store selected', 'Please sign in to a store before saving contacts.');
       return;
@@ -251,12 +296,31 @@ export default function OperationsScreen() {
       updatedAt: new Date().toISOString(),
     };
 
-    upsertContact(contact);
-    setSelectedContactId(contact.id);
-    Alert.alert(
-      selectedContact ? 'Updated' : 'Saved',
-      `${contact.kind === 'supplier' ? 'Supplier' : 'Customer'} record stored successfully.`,
-    );
+    try {
+      if (selectedContact) {
+        await updateBusinessContact(contact.id, {
+          tenantId: contact.tenantId,
+          kind: contact.kind,
+          name: contact.name,
+          phone: contact.phone,
+          email: contact.email,
+          notes: contact.notes,
+          createdAt: contact.createdAt,
+          updatedAt: contact.updatedAt,
+        });
+      } else {
+        await createBusinessContact(contact);
+      }
+
+      upsertContact(contact);
+      setSelectedContactId(contact.id);
+      Alert.alert(
+        selectedContact ? 'Updated' : 'Saved',
+        `${contact.kind === 'supplier' ? 'Supplier' : 'Customer'} record stored successfully.`,
+      );
+    } catch (error: any) {
+      Alert.alert('Failed', String(error?.message ?? error));
+    }
   }
 
   function deleteSelectedContact() {
@@ -273,15 +337,22 @@ export default function OperationsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            removeContact(selectedContact.id);
-            clearContactForm();
+            void (async () => {
+              try {
+                await deleteBusinessContact(selectedContact.id);
+                removeContact(selectedContact.id);
+                clearContactForm();
+              } catch (error: any) {
+                Alert.alert('Failed', String(error?.message ?? error));
+              }
+            })();
           },
         },
       ],
     );
   }
 
-  function savePurchase() {
+  async function savePurchase() {
     if (!tenantId) {
       Alert.alert('No store selected', 'Please sign in to a store before creating purchase orders.');
       return;
@@ -331,9 +402,32 @@ export default function OperationsScreen() {
       receivedAt: selectedPurchase?.receivedAt,
     };
 
-    upsertPurchase(purchase);
-    setSelectedPurchaseId(purchase.id);
-    Alert.alert(selectedPurchase ? 'Updated' : 'Saved', 'Purchase order saved successfully.');
+    try {
+      if (selectedPurchase) {
+        await updatePurchaseOrder(purchase.id, {
+          tenantId: purchase.tenantId,
+          supplierId: purchase.supplierId,
+          supplierName: purchase.supplierName,
+          productId: purchase.productId,
+          productName: purchase.productName,
+          quantity: purchase.quantity,
+          cost: purchase.cost,
+          expiryDate: purchase.expiryDate ?? null,
+          notes: purchase.notes,
+          status: purchase.status,
+          createdAt: purchase.createdAt,
+          receivedAt: purchase.receivedAt,
+        });
+      } else {
+        await createPurchaseOrder(purchase);
+      }
+
+      upsertPurchase(purchase);
+      setSelectedPurchaseId(purchase.id);
+      Alert.alert(selectedPurchase ? 'Updated' : 'Saved', 'Purchase order saved successfully.');
+    } catch (error: any) {
+      Alert.alert('Failed', String(error?.message ?? error));
+    }
   }
 
   async function receivePurchase(purchase: PurchaseOrder) {
@@ -359,11 +453,18 @@ export default function OperationsScreen() {
         notes: purchase.notes ? `PO ${purchase.id}: ${purchase.notes}` : `PO ${purchase.id}`,
       });
 
-      upsertPurchase({
+      const receivedPurchase: PurchaseOrder = {
         ...purchase,
         status: 'received',
         receivedAt: new Date().toISOString(),
+      };
+
+      await updatePurchaseOrder(purchase.id, {
+        status: receivedPurchase.status,
+        receivedAt: receivedPurchase.receivedAt,
       });
+
+      upsertPurchase(receivedPurchase);
 
       setProducts(
         products.map((product) =>
@@ -411,10 +512,15 @@ export default function OperationsScreen() {
     }
   }
 
-  function deletePurchase(purchaseId: string) {
-    removePurchase(purchaseId);
-    if (selectedPurchaseId === purchaseId) {
-      clearPurchaseForm();
+  async function deletePurchase(purchaseId: string) {
+    try {
+      await deletePurchaseOrder(purchaseId);
+      removePurchase(purchaseId);
+      if (selectedPurchaseId === purchaseId) {
+        clearPurchaseForm();
+      }
+    } catch (error: any) {
+      Alert.alert('Failed', String(error?.message ?? error));
     }
   }
 

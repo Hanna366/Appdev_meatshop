@@ -29,6 +29,7 @@ const DEMO_CONTACTS: BusinessContact[] = [
 
 type ContactState = {
   contacts: BusinessContact[];
+  setContacts: (contacts: BusinessContact[]) => void;
   upsertContact: (contact: BusinessContact) => void;
   removeContact: (contactId: string) => void;
   clearContacts: () => void;
@@ -38,6 +39,9 @@ export const useContactStore = create<ContactState>()(
   persist(
     (set) => ({
       contacts: DEMO_CONTACTS,
+      setContacts: (contacts) => {
+        set({ contacts });
+      },
       upsertContact: (contact) => {
         set((state) => {
           const exists = state.contacts.some((item) => item.id === contact.id);

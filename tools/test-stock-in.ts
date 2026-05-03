@@ -23,11 +23,11 @@
 
     const txQ = firestore.query(firestore.collection(db, 'inventoryTransactions'), firestore.where('tenantId', '==', 'test-tenant'));
     const txSnap = await firestore.getDocs(txQ);
-    console.log('Transactions:', txSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    console.log('Transactions:', txSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
 
     const bQ = firestore.query(firestore.collection(db, 'inventoryBatches'), firestore.where('tenantId', '==', 'test-tenant'));
     const bSnap = await firestore.getDocs(bQ);
-    console.log('Batches:', bSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    console.log('Batches:', bSnap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
 
     process.exit(0);
   } catch (err) {

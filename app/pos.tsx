@@ -14,6 +14,7 @@ import {
 import { LockedFeatureNotice } from '../src/components/ui/LockedFeatureNotice';
 import { hasPermission } from '../src/features/access/services/accessControl';
 import { useAuthStore } from '../src/features/auth/store/useAuthStore';
+import { fetchContactsByTenant } from '../src/features/contact/services/contactService';
 import { useContactStore } from '../src/features/contact/store/useContactStore';
 import { createStockOut } from '../src/features/inventory/services/inventoryService';
 import { useInventoryStore } from '../src/features/inventory/store/useInventoryStore';
@@ -41,6 +42,7 @@ export default function PosScreen() {
   const products = useProductStore((state) => state.products);
   const setProducts = useProductStore((state) => state.setProducts);
   const contacts = useContactStore((state) => state.contacts);
+  const setContacts = useContactStore((state) => state.setContacts);
   const sales = useSalesStore((state) => state.sales);
   const upsertSale = useSalesStore((state) => state.upsertSale);
   const summaries = useInventoryStore((state) => state.summaries);
@@ -117,6 +119,31 @@ export default function PosScreen() {
       mounted = false;
     };
   }, [products.length, setProducts, tenantId]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadContacts() {
+      if (!tenantId) {
+        return;
+      }
+
+      try {
+        const remoteContacts = await fetchContactsByTenant(tenantId);
+        if (!mounted) {
+          return;
+        }
+        setContacts(remoteContacts);
+      } catch (error) {
+        console.warn('Failed to load contacts for POS', error);
+      }
+    }
+
+    void loadContacts();
+    return () => {
+      mounted = false;
+    };
+  }, [setContacts, tenantId]);
 
   const customers = useMemo(
     () => contacts.filter((contact) => contact.tenantId === tenantId && contact.kind === 'customer'),

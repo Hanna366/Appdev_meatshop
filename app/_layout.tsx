@@ -5,6 +5,8 @@ import { initFirebase } from '../src/services/firebase/initFirebase';
 import { watchAuthState } from '../src/features/auth/services/firebaseAuthService';
 import { useAuthStore } from '../src/features/auth/store/useAuthStore';
 
+const DEMO_LOCAL_USER_ID = 'usr_001';
+
 export default function RootLayout() {
   const setUser = useAuthStore((s) => s.setUser);
   const logout = useAuthStore((s) => s.logout);
@@ -30,6 +32,10 @@ export default function RootLayout() {
               setUser(fbUser);
             }
           } else {
+            const existingUser = useAuthStore.getState().user;
+            if (existingUser?.id === DEMO_LOCAL_USER_ID) {
+              return;
+            }
             logout();
           }
         });

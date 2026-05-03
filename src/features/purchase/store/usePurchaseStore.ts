@@ -6,6 +6,7 @@ import type { PurchaseOrder } from '../types/purchaseTypes';
 
 type PurchaseState = {
   purchases: PurchaseOrder[];
+  setPurchases: (purchases: PurchaseOrder[]) => void;
   upsertPurchase: (purchase: PurchaseOrder) => void;
   removePurchase: (purchaseId: string) => void;
 };
@@ -14,6 +15,9 @@ export const usePurchaseStore = create<PurchaseState>()(
   persist(
     (set) => ({
       purchases: [],
+      setPurchases: (purchases) => {
+        set({ purchases });
+      },
       upsertPurchase: (purchase) => {
         set((state) => {
           const exists = state.purchases.some((item) => item.id === purchase.id);

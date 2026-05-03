@@ -20,6 +20,7 @@ import {
 import { useInventoryStore } from '../src/features/inventory/store/useInventoryStore';
 import { fetchProductsByTenant } from '../src/features/product/services/productService';
 import { useProductStore } from '../src/features/product/store/useProductStore';
+import { fetchPurchaseOrdersByTenant } from '../src/features/purchase/services/purchaseService';
 import { usePurchaseStore } from '../src/features/purchase/store/usePurchaseStore';
 import {
   buildBusinessReport,
@@ -51,6 +52,7 @@ export default function ReportsScreen() {
   const setSummaries = useInventoryStore((state) => state.setSummaries);
   const sales = useSalesStore((state) => state.sales);
   const purchases = usePurchaseStore((state) => state.purchases);
+  const setPurchases = usePurchaseStore((state) => state.setPurchases);
   const queue = useSyncQueueStore((state) => state.queue);
   const subscriptionsByTenantId = useSubscriptionStore((state) => state.subscriptionsByTenantId);
   const usageByTenantId = useSubscriptionStore((state) => state.usageByTenantId);
@@ -93,10 +95,6 @@ export default function ReportsScreen() {
         return;
       }
 
-      if (products.length > 0 && summaries.length > 0) {
-        return;
-      }
-
       setLoading(true);
       try {
         if (products.length === 0) {
@@ -115,6 +113,11 @@ export default function ReportsScreen() {
             setSummaries(inventoryData as any);
           }
         }
+
+        const remotePurchases = await fetchPurchaseOrdersByTenant(tenantId);
+        if (mounted) {
+          setPurchases(remotePurchases);
+        }
       } catch (error) {
         console.warn('Failed to load reporting data', error);
       } finally {
@@ -128,7 +131,7 @@ export default function ReportsScreen() {
     return () => {
       mounted = false;
     };
-  }, [products.length, setProducts, setSummaries, summaries.length, tenantId]);
+  }, [products.length, setProducts, setPurchases, setSummaries, summaries.length, tenantId]);
 
   const scopedSales = useMemo(
     () => sales.filter((sale) => sale.tenantId === tenantId),
