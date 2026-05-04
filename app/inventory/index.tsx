@@ -5,7 +5,7 @@ import InventoryListScreen from '../../src/features/inventory/screens/InventoryL
 export default function InventoryRoute() {
   return (
     <>
-      <Stack.Screen options={{ title: 'Inventory' }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <InventoryListScreen />
     </>
   );

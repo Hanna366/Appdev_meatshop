@@ -1,9 +1,10 @@
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +12,17 @@ import {
   View,
 } from 'react-native';
 
+import {
+  MEATSHOP_COLORS,
+  MEATSHOP_INPUT,
+  MEATSHOP_PILL,
+  MeatshopHeaderIconButton,
+  MeatshopPageHeader,
+  MeatshopPageHero,
+  MeatshopSectionHeader,
+  MeatshopShell,
+  MeatshopSurfaceCard,
+} from '../src/components/ui/MeatshopChrome';
 import { LockedFeatureNotice } from '../src/components/ui/LockedFeatureNotice';
 import { hasPermission } from '../src/features/access/services/accessControl';
 import { useAuthStore } from '../src/features/auth/store/useAuthStore';
@@ -37,13 +49,6 @@ import type { PurchaseOrder } from '../src/features/purchase/types/purchaseTypes
 import { evaluateEntitlement } from '../src/features/subscription/services/entitlementService';
 import { useSubscriptionStore } from '../src/features/subscription/store/useSubscriptionStore';
 import { useTenantStore } from '../src/features/tenant/store/useTenantStore';
-
-const PRIMARY = '#7A1F1F';
-const BG = '#F6F6F3';
-const CARD = '#FFFFFF';
-const BORDER = '#E5DED1';
-const TEXT = '#1F1C17';
-const MUTED = '#6A655B';
 
 type ScreenTab = 'suppliers' | 'customers' | 'purchases';
 
@@ -84,6 +89,7 @@ const EMPTY_PURCHASE_FORM: PurchaseFormState = {
 };
 
 export default function OperationsScreen() {
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const tenantId = useTenantStore((state) => state.activeTenantId);
   const products = useProductStore((state) => state.products);
@@ -527,99 +533,122 @@ export default function OperationsScreen() {
   const visibleContacts = activeTab === 'customers' ? customers : suppliers;
   const scopedPurchases = purchases.filter((purchase) => purchase.tenantId === tenantId);
 
-  if (!canManageOperations) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.blockedState}>
-          <Text style={styles.blockedTitle}>Access Restricted</Text>
-          <Text style={styles.blockedText}>
-            Your current role cannot manage suppliers, customers, or purchase orders.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!operationsEntitlement.allowed) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.blockedState}>
-          <LockedFeatureNotice
-            title="Operations Locked"
-            message={operationsEntitlement.message ?? 'Upgrade your plan to manage store operations.'}
-            requiredPlan={operationsEntitlement.requiredPlan}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const blockedBody = !canManageOperations ? (
+    <MeatshopSurfaceCard>
+      <Text style={styles.blockedTitle}>Access Restricted</Text>
+      <Text style={styles.blockedText}>
+        Your current role cannot manage suppliers, customers, or purchase orders.
+      </Text>
+    </MeatshopSurfaceCard>
+  ) : !operationsEntitlement.allowed ? (
+    <MeatshopSurfaceCard>
+      <LockedFeatureNotice
+        title="Operations Locked"
+        message={operationsEntitlement.message ?? 'Upgrade your plan to manage store operations.'}
+        requiredPlan={operationsEntitlement.requiredPlan}
+      />
+    </MeatshopSurfaceCard>
+  ) : null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Store Operations</Text>
-          <Text style={styles.subtitle}>
-            Manage suppliers, customers, and purchase receiving for your meat shop.
-          </Text>
-        </View>
+    <MeatshopShell>
+      <MeatshopPageHeader
+        leftAction={{
+          onPress: () => router.back(),
+          children: <Feather name="chevron-left" size={28} color={MEATSHOP_COLORS.maroon} />,
+        }}
+        rightActions={
+          <MeatshopHeaderIconButton
+            icon={<MaterialCommunityIcons name="view-grid-outline" size={26} color={MEATSHOP_COLORS.maroon} />}
+            onPress={() => router.push('/dashboard')}
+          />
+        }
+      />
 
-        <View style={styles.tabRow}>
-          {(['suppliers', 'customers', 'purchases'] as ScreenTab[]).map((tab) => {
-            const active = activeTab === tab;
-            const label =
-              tab === 'suppliers' ? 'Suppliers' : tab === 'customers' ? 'Customers' : 'Purchases';
-            return (
-              <Pressable
-                key={tab}
-                onPress={() => {
-                  setActiveTab(tab);
-                  if (tab !== 'purchases') {
-                    clearPurchaseForm();
-                  } else {
-                    clearContactForm();
-                  }
-                }}
-                style={[styles.tabButton, active && styles.tabButtonActive]}
-              >
-                <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+      {blockedBody ? (
+        <View style={styles.blockedWrap}>{blockedBody}</View>
+      ) : (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <MeatshopPageHero
+            eyebrow="Workflow"
+            title="Store Operations"
+            subtitle="Manage suppliers, customers, purchase orders, and receiving with the same dashboard-inspired workspace."
+          >
+            <View style={styles.heroMetaRow}>
+              <View style={styles.heroMetaPill}>
+                <MaterialCommunityIcons name="truck-delivery-outline" size={16} color={MEATSHOP_COLORS.maroon} />
+                <Text style={styles.heroMetaText}>{suppliers.length} suppliers</Text>
+              </View>
+              <View style={styles.heroMetaPill}>
+                <MaterialCommunityIcons name="account-group-outline" size={16} color={MEATSHOP_COLORS.gold} />
+                <Text style={styles.heroMetaText}>{customers.length} customers</Text>
+              </View>
+              <View style={styles.heroMetaPill}>
+                <MaterialCommunityIcons name="clipboard-list-outline" size={16} color={MEATSHOP_COLORS.gold} />
+                <Text style={styles.heroMetaText}>{scopedPurchases.length} purchase orders</Text>
+              </View>
+            </View>
+          </MeatshopPageHero>
 
-        {activeTab !== 'purchases' ? (
-          <>
-            {!(
+          <MeatshopSectionHeader
+            title="Mode"
+            icon={<Feather name="layers" size={18} color={MEATSHOP_COLORS.maroon} />}
+          />
+
+          <View style={styles.tabRow}>
+            {(['suppliers', 'customers', 'purchases'] as ScreenTab[]).map((tab) => {
+              const active = activeTab === tab;
+              const label =
+                tab === 'suppliers' ? 'Suppliers' : tab === 'customers' ? 'Customers' : 'Purchases';
+              return (
+                <Pressable
+                  key={tab}
+                  onPress={() => {
+                    setActiveTab(tab);
+                    if (tab !== 'purchases') {
+                      clearPurchaseForm();
+                    } else {
+                      clearContactForm();
+                    }
+                  }}
+                  style={[styles.tabButton, active && styles.tabButtonActive]}
+                >
+                  <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {activeTab !== 'purchases' ? (
+            !(
               activeTab === 'suppliers' ? supplierEntitlement.allowed : customerEntitlement.allowed
             ) ? (
-              <LockedFeatureNotice
-                title={`${activeTab === 'suppliers' ? 'Supplier' : 'Customer'} Tools Locked`}
-                message="This plan does not include contact management."
-                requiredPlan={
-                  activeTab === 'suppliers'
-                    ? supplierEntitlement.requiredPlan
-                    : customerEntitlement.requiredPlan
-                }
-              />
+              <MeatshopSurfaceCard>
+                <LockedFeatureNotice
+                  title={`${activeTab === 'suppliers' ? 'Supplier' : 'Customer'} Tools Locked`}
+                  message="This plan does not include contact management."
+                  requiredPlan={
+                    activeTab === 'suppliers'
+                      ? supplierEntitlement.requiredPlan
+                      : customerEntitlement.requiredPlan
+                  }
+                />
+              </MeatshopSurfaceCard>
             ) : (
               <>
-                <View style={styles.card}>
-                  <Text style={styles.cardTitle}>
-                    {selectedContactId
-                      ? 'Edit Contact'
-                      : `Add ${activeTab === 'suppliers' ? 'Supplier' : 'Customer'}`}
-                  </Text>
+                <MeatshopSectionHeader
+                  title={selectedContactId ? 'Edit Contact' : `Add ${activeTab === 'suppliers' ? 'Supplier' : 'Customer'}`}
+                  icon={<Feather name="edit-3" size={18} color={MEATSHOP_COLORS.maroon} />}
+                />
 
+                <MeatshopSurfaceCard>
                   <Text style={styles.label}>Name</Text>
                   <TextInput
                     value={contactForm.name}
                     onChangeText={(name) => setContactForm((current) => ({ ...current, name }))}
                     style={styles.input}
                     placeholder="Enter contact name"
-                    placeholderTextColor="#8A8A8A"
+                    placeholderTextColor={MEATSHOP_COLORS.soft}
                   />
 
                   <Text style={styles.label}>Phone</Text>
@@ -628,7 +657,7 @@ export default function OperationsScreen() {
                     onChangeText={(phone) => setContactForm((current) => ({ ...current, phone }))}
                     style={styles.input}
                     placeholder="Contact number"
-                    placeholderTextColor="#8A8A8A"
+                    placeholderTextColor={MEATSHOP_COLORS.soft}
                   />
 
                   <Text style={styles.label}>Email</Text>
@@ -637,7 +666,7 @@ export default function OperationsScreen() {
                     onChangeText={(email) => setContactForm((current) => ({ ...current, email }))}
                     style={styles.input}
                     placeholder="Email address"
-                    placeholderTextColor="#8A8A8A"
+                    placeholderTextColor={MEATSHOP_COLORS.soft}
                     autoCapitalize="none"
                   />
 
@@ -647,15 +676,13 @@ export default function OperationsScreen() {
                     onChangeText={(notes) => setContactForm((current) => ({ ...current, notes }))}
                     style={[styles.input, styles.notesInput]}
                     placeholder="Special notes"
-                    placeholderTextColor="#8A8A8A"
+                    placeholderTextColor={MEATSHOP_COLORS.soft}
                     multiline
                   />
 
                   <View style={styles.actionRow}>
                     <Pressable onPress={saveContact} style={styles.primaryButton}>
-                      <Text style={styles.primaryButtonText}>
-                        {selectedContactId ? 'Update Contact' : 'Save Contact'}
-                      </Text>
+                      <Text style={styles.primaryButtonText}>{selectedContactId ? 'Update Contact' : 'Save Contact'}</Text>
                     </Pressable>
                     <Pressable onPress={clearContactForm} style={styles.secondaryButton}>
                       <Text style={styles.secondaryButtonText}>Clear</Text>
@@ -668,9 +695,9 @@ export default function OperationsScreen() {
                       <Text style={styles.deleteButtonText}>Delete</Text>
                     </Pressable>
                   </View>
-                </View>
+                </MeatshopSurfaceCard>
 
-                <View style={styles.card}>
+                <MeatshopSurfaceCard>
                   <Text style={styles.cardTitle}>
                     {activeTab === 'suppliers' ? 'Supplier List' : 'Customer List'}
                   </Text>
@@ -696,207 +723,219 @@ export default function OperationsScreen() {
                       );
                     })
                   )}
-                </View>
+                </MeatshopSurfaceCard>
               </>
-            )}
-          </>
-        ) : (
-          <>
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>
-                {selectedPurchaseId ? 'Edit Purchase Order' : 'Create Purchase Order'}
-              </Text>
-
-              <Text style={styles.label}>Choose Supplier</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                {suppliers.map((supplier) => {
-                  const active = purchaseForm.supplierId === supplier.id;
-                  return (
-                    <Pressable
-                      key={supplier.id}
-                      onPress={() =>
-                        setPurchaseForm((current) => ({
-                          ...current,
-                          supplierId: supplier.id,
-                          supplierName: supplier.name,
-                        }))
-                      }
-                      style={[styles.chip, active && styles.chipActive]}
-                    >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{supplier.name}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-
-              <Text style={styles.label}>Supplier Name</Text>
-              <TextInput
-                value={purchaseForm.supplierName}
-                onChangeText={(supplierName) =>
-                  setPurchaseForm((current) => ({ ...current, supplierName }))
-                }
-                style={styles.input}
-                placeholder="Supplier name"
-                placeholderTextColor="#8A8A8A"
+            )
+          ) : (
+            <>
+              <MeatshopSectionHeader
+                title={selectedPurchaseId ? 'Edit Purchase Order' : 'Create Purchase Order'}
+                icon={<Feather name="package" size={18} color={MEATSHOP_COLORS.maroon} />}
               />
 
-              <Text style={styles.label}>Choose Product</Text>
-              {loadingProducts ? <ActivityIndicator style={{ marginVertical: 8 }} /> : null}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                {products.map((product) => {
-                  const active = purchaseForm.productId === product.id;
-                  return (
-                    <Pressable
-                      key={product.id}
-                      onPress={() =>
-                        setPurchaseForm((current) => ({
-                          ...current,
-                          productId: product.id,
-                          productName: product.name,
-                        }))
-                      }
-                      style={[styles.chip, active && styles.chipActive]}
-                    >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{product.name}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-
-              <View style={styles.row}>
-                <View style={styles.rowField}>
-                  <Text style={styles.label}>Quantity (kg)</Text>
-                  <TextInput
-                    value={purchaseForm.quantity}
-                    onChangeText={(quantity) => setPurchaseForm((current) => ({ ...current, quantity }))}
-                    style={styles.input}
-                    placeholder="0"
-                    placeholderTextColor="#8A8A8A"
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={styles.rowField}>
-                  <Text style={styles.label}>Cost</Text>
-                  <TextInput
-                    value={purchaseForm.cost}
-                    onChangeText={(cost) => setPurchaseForm((current) => ({ ...current, cost }))}
-                    style={styles.input}
-                    placeholder="0.00"
-                    placeholderTextColor="#8A8A8A"
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-
-              <Text style={styles.label}>Expiry (YYYY-MM-DD)</Text>
-              <TextInput
-                value={purchaseForm.expiryDate}
-                onChangeText={(expiryDate) => setPurchaseForm((current) => ({ ...current, expiryDate }))}
-                style={styles.input}
-                placeholder="2027-12-31"
-                placeholderTextColor="#8A8A8A"
-              />
-
-              <Text style={styles.label}>Notes</Text>
-              <TextInput
-                value={purchaseForm.notes}
-                onChangeText={(notes) => setPurchaseForm((current) => ({ ...current, notes }))}
-                style={[styles.input, styles.notesInput]}
-                placeholder="Delivery or receiving notes"
-                placeholderTextColor="#8A8A8A"
-                multiline
-              />
-
-              <View style={styles.actionRow}>
-                <Pressable onPress={savePurchase} style={styles.primaryButton}>
-                  <Text style={styles.primaryButtonText}>
-                    {selectedPurchaseId ? 'Update Order' : 'Save Order'}
-                  </Text>
-                </Pressable>
-                <Pressable onPress={clearPurchaseForm} style={styles.secondaryButton}>
-                  <Text style={styles.secondaryButtonText}>Clear</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Purchase Orders</Text>
-              {scopedPurchases.length === 0 ? (
-                <Text style={styles.emptyText}>No purchase orders yet.</Text>
-              ) : (
-                scopedPurchases.map((purchase) => {
-                  const selected = purchase.id === selectedPurchaseId;
-                  return (
-                    <View key={purchase.id} style={[styles.purchaseRow, selected && styles.listRowSelected]}>
-                      <Pressable onPress={() => setSelectedPurchaseId(purchase.id)} style={styles.purchaseBody}>
-                        <Text style={styles.listRowTitle}>{purchase.productName}</Text>
-                        <Text style={styles.listRowMeta}>
-                          {purchase.supplierName} | {purchase.quantity} kg | {purchase.status}
-                        </Text>
-                        {purchase.expiryDate ? (
-                          <Text style={styles.listRowMeta}>Expiry: {purchase.expiryDate}</Text>
-                        ) : null}
+              <MeatshopSurfaceCard>
+                <Text style={styles.label}>Choose Supplier</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                  {suppliers.map((supplier) => {
+                    const active = purchaseForm.supplierId === supplier.id;
+                    return (
+                      <Pressable
+                        key={supplier.id}
+                        onPress={() =>
+                          setPurchaseForm((current) => ({
+                            ...current,
+                            supplierId: supplier.id,
+                            supplierName: supplier.name,
+                          }))
+                        }
+                        style={[styles.chip, active && styles.chipActive]}
+                      >
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{supplier.name}</Text>
                       </Pressable>
-                      <View style={styles.purchaseActions}>
-                        <Pressable
-                          onPress={() => {
-                            void receivePurchase(purchase);
-                          }}
-                          disabled={purchase.status === 'received' || receivingId === purchase.id}
-                          style={[
-                            styles.smallButton,
-                            (purchase.status === 'received' || receivingId === purchase.id) &&
-                              styles.disabledButton,
-                          ]}
-                        >
-                          <Text style={styles.smallButtonText}>
-                            {receivingId === purchase.id
-                              ? 'Receiving...'
-                              : purchase.status === 'received'
-                                ? 'Received'
-                                : 'Receive'}
+                    );
+                  })}
+                </ScrollView>
+
+                <Text style={styles.label}>Supplier Name</Text>
+                <TextInput
+                  value={purchaseForm.supplierName}
+                  onChangeText={(supplierName) => setPurchaseForm((current) => ({ ...current, supplierName }))}
+                  style={styles.input}
+                  placeholder="Supplier name"
+                  placeholderTextColor={MEATSHOP_COLORS.soft}
+                />
+
+                <Text style={styles.label}>Choose Product</Text>
+                {loadingProducts ? <ActivityIndicator style={{ marginVertical: 8 }} color={MEATSHOP_COLORS.maroon} /> : null}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                  {products.map((product) => {
+                    const active = purchaseForm.productId === product.id;
+                    return (
+                      <Pressable
+                        key={product.id}
+                        onPress={() =>
+                          setPurchaseForm((current) => ({
+                            ...current,
+                            productId: product.id,
+                            productName: product.name,
+                          }))
+                        }
+                        style={[styles.chip, active && styles.chipActive]}
+                      >
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{product.name}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                <View style={styles.row}>
+                  <View style={styles.rowField}>
+                    <Text style={styles.label}>Quantity (kg)</Text>
+                    <TextInput
+                      value={purchaseForm.quantity}
+                      onChangeText={(quantity) => setPurchaseForm((current) => ({ ...current, quantity }))}
+                      style={styles.input}
+                      placeholder="0"
+                      placeholderTextColor={MEATSHOP_COLORS.soft}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.rowField}>
+                    <Text style={styles.label}>Cost</Text>
+                    <TextInput
+                      value={purchaseForm.cost}
+                      onChangeText={(cost) => setPurchaseForm((current) => ({ ...current, cost }))}
+                      style={styles.input}
+                      placeholder="0.00"
+                      placeholderTextColor={MEATSHOP_COLORS.soft}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <Text style={styles.label}>Expiry (YYYY-MM-DD)</Text>
+                <TextInput
+                  value={purchaseForm.expiryDate}
+                  onChangeText={(expiryDate) => setPurchaseForm((current) => ({ ...current, expiryDate }))}
+                  style={styles.input}
+                  placeholder="2027-12-31"
+                  placeholderTextColor={MEATSHOP_COLORS.soft}
+                />
+
+                <Text style={styles.label}>Notes</Text>
+                <TextInput
+                  value={purchaseForm.notes}
+                  onChangeText={(notes) => setPurchaseForm((current) => ({ ...current, notes }))}
+                  style={[styles.input, styles.notesInput]}
+                  placeholder="Delivery or receiving notes"
+                  placeholderTextColor={MEATSHOP_COLORS.soft}
+                  multiline
+                />
+
+                <View style={styles.actionRow}>
+                  <Pressable onPress={savePurchase} style={styles.primaryButton}>
+                    <Text style={styles.primaryButtonText}>{selectedPurchaseId ? 'Update Order' : 'Save Order'}</Text>
+                  </Pressable>
+                  <Pressable onPress={clearPurchaseForm} style={styles.secondaryButton}>
+                    <Text style={styles.secondaryButtonText}>Clear</Text>
+                  </Pressable>
+                </View>
+              </MeatshopSurfaceCard>
+
+              <MeatshopSurfaceCard>
+                <Text style={styles.cardTitle}>Purchase Orders</Text>
+                {scopedPurchases.length === 0 ? (
+                  <Text style={styles.emptyText}>No purchase orders yet.</Text>
+                ) : (
+                  scopedPurchases.map((purchase) => {
+                    const selected = purchase.id === selectedPurchaseId;
+                    return (
+                      <View key={purchase.id} style={[styles.purchaseRow, selected && styles.listRowSelected]}>
+                        <Pressable onPress={() => setSelectedPurchaseId(purchase.id)} style={styles.purchaseBody}>
+                          <Text style={styles.listRowTitle}>{purchase.productName}</Text>
+                          <Text style={styles.listRowMeta}>
+                            {purchase.supplierName} | {purchase.quantity} kg | {purchase.status}
                           </Text>
+                          {purchase.expiryDate ? <Text style={styles.listRowMeta}>Expiry: {purchase.expiryDate}</Text> : null}
                         </Pressable>
-                        <Pressable
-                          onPress={() => deletePurchase(purchase.id)}
-                          style={[styles.smallButton, styles.smallDeleteButton]}
-                        >
-                          <Text style={styles.smallDeleteButtonText}>Delete</Text>
-                        </Pressable>
+                        <View style={styles.purchaseActions}>
+                          <Pressable
+                            onPress={() => {
+                              void receivePurchase(purchase);
+                            }}
+                            disabled={purchase.status === 'received' || receivingId === purchase.id}
+                            style={[
+                              styles.smallButton,
+                              (purchase.status === 'received' || receivingId === purchase.id) && styles.disabledButton,
+                            ]}
+                          >
+                            <Text style={styles.smallButtonText}>
+                              {receivingId === purchase.id
+                                ? 'Receiving...'
+                                : purchase.status === 'received'
+                                  ? 'Received'
+                                  : 'Receive'}
+                            </Text>
+                          </Pressable>
+                          <Pressable onPress={() => deletePurchase(purchase.id)} style={[styles.smallButton, styles.smallDeleteButton]}>
+                            <Text style={styles.smallDeleteButtonText}>Delete</Text>
+                          </Pressable>
+                        </View>
                       </View>
-                    </View>
-                  );
-                })
-              )}
-            </View>
-          </>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+                    );
+                  })
+                )}
+              </MeatshopSurfaceCard>
+            </>
+          )}
+        </ScrollView>
+      )}
+    </MeatshopShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  blockedWrap: {
     flex: 1,
-    backgroundColor: BG,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+  },
+  blockedTitle: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  blockedText: {
+    marginTop: 8,
+    color: MEATSHOP_COLORS.muted,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   content: {
-    padding: 16,
-    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 26,
+    gap: 20,
   },
-  header: {
-    marginBottom: 4,
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  title: {
-    fontSize: 24,
+  heroMetaPill: {
+    ...MEATSHOP_PILL,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  heroMetaText: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 13,
     fontWeight: '700',
-    color: TEXT,
-  },
-  subtitle: {
-    marginTop: 4,
-    color: MUTED,
-    fontSize: 14,
   },
   tabRow: {
     flexDirection: 'row',
@@ -904,148 +943,128 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
+    minHeight: 52,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: CARD,
+    borderColor: MEATSHOP_COLORS.border,
+    backgroundColor: MEATSHOP_COLORS.surface,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   tabButtonActive: {
-    backgroundColor: PRIMARY,
-    borderColor: PRIMARY,
+    backgroundColor: MEATSHOP_COLORS.maroon,
+    borderColor: MEATSHOP_COLORS.maroon,
   },
   tabButtonText: {
-    color: MUTED,
-    fontWeight: '700',
+    color: MEATSHOP_COLORS.muted,
+    fontWeight: '800',
   },
   tabButtonTextActive: {
     color: '#FFFFFF',
   },
-  card: {
-    backgroundColor: CARD,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 14,
-  },
   cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: TEXT,
-    marginBottom: 8,
+    color: MEATSHOP_COLORS.text,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 2,
   },
   label: {
-    fontWeight: '700',
-    color: TEXT,
-    marginTop: 10,
-    marginBottom: 6,
+    fontWeight: '800',
+    color: MEATSHOP_COLORS.text,
+    marginTop: 12,
+    marginBottom: 8,
+    fontSize: 14,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    color: TEXT,
+    ...MEATSHOP_INPUT,
   },
   notesInput: {
-    minHeight: 90,
+    minHeight: 96,
     textAlignVertical: 'top',
   },
   actionRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 14,
+    marginTop: 16,
     flexWrap: 'wrap',
   },
   primaryButton: {
-    backgroundColor: PRIMARY,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: MEATSHOP_COLORS.maroonDark,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 14,
   },
   secondaryButton: {
-    backgroundColor: '#FFFFFF',
+    minHeight: 54,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderColor: MEATSHOP_COLORS.border,
   },
   secondaryButtonText: {
-    color: TEXT,
-    fontWeight: '700',
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '800',
+    fontSize: 14,
   },
   deleteButton: {
-    backgroundColor: '#FFF1EC',
+    minHeight: 54,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    backgroundColor: MEATSHOP_COLORS.dangerBg,
     borderWidth: 1,
-    borderColor: '#F2D2C6',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderColor: MEATSHOP_COLORS.dangerBorder,
   },
   deleteButtonText: {
-    color: '#A23821',
-    fontWeight: '700',
+    color: MEATSHOP_COLORS.dangerText,
+    fontWeight: '800',
+    fontSize: 14,
   },
   disabledButton: {
     opacity: 0.55,
   },
   listRow: {
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 10,
-    backgroundColor: '#FFFFFF',
+    borderColor: MEATSHOP_COLORS.border,
+    borderRadius: 18,
+    padding: 14,
+    marginTop: 12,
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
   },
   listRowSelected: {
-    borderColor: PRIMARY,
+    borderColor: MEATSHOP_COLORS.maroon,
     backgroundColor: '#FFF7F4',
   },
   listRowMain: {
     gap: 3,
   },
   listRowTitle: {
-    fontWeight: '700',
-    color: TEXT,
+    fontWeight: '800',
+    color: MEATSHOP_COLORS.text,
+    fontSize: 15,
   },
   listRowMeta: {
-    color: MUTED,
+    color: MEATSHOP_COLORS.muted,
     fontSize: 12,
     marginTop: 2,
   },
   listRowHint: {
-    marginTop: 8,
-    color: PRIMARY,
+    marginTop: 10,
+    color: MEATSHOP_COLORS.maroon,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   emptyText: {
-    color: MUTED,
+    color: MEATSHOP_COLORS.muted,
     marginTop: 6,
-  },
-  blockedState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  blockedTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: TEXT,
-    marginBottom: 8,
-  },
-  blockedText: {
-    textAlign: 'center',
-    color: MUTED,
     lineHeight: 21,
   },
   chipRow: {
@@ -1053,20 +1072,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: '#FFFFFF',
+    ...MEATSHOP_PILL,
   },
   chipActive: {
-    backgroundColor: PRIMARY,
-    borderColor: PRIMARY,
+    backgroundColor: MEATSHOP_COLORS.maroon,
+    borderColor: MEATSHOP_COLORS.maroon,
   },
   chipText: {
-    color: TEXT,
-    fontWeight: '600',
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '700',
     fontSize: 12,
   },
   chipTextActive: {
@@ -1074,18 +1088,18 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   rowField: {
     flex: 1,
   },
   purchaseRow: {
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 10,
-    backgroundColor: '#FFFFFF',
+    borderColor: MEATSHOP_COLORS.border,
+    borderRadius: 18,
+    padding: 14,
+    marginTop: 12,
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
   },
   purchaseBody: {
     marginBottom: 10,
@@ -1096,24 +1110,25 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   smallButton: {
-    backgroundColor: PRIMARY,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    minHeight: 42,
+    borderRadius: 14,
+    backgroundColor: MEATSHOP_COLORS.maroonDark,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
   },
   smallButtonText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 12,
   },
   smallDeleteButton: {
-    backgroundColor: '#FFF1EC',
+    backgroundColor: MEATSHOP_COLORS.dangerBg,
     borderWidth: 1,
-    borderColor: '#F2D2C6',
+    borderColor: MEATSHOP_COLORS.dangerBorder,
   },
   smallDeleteButtonText: {
-    color: '#A23821',
-    fontWeight: '700',
+    color: MEATSHOP_COLORS.dangerText,
+    fontWeight: '800',
     fontSize: 12,
   },
 });

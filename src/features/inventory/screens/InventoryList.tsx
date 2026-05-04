@@ -1,22 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+
+import {
+  MEATSHOP_CARD_SHADOW,
+  MEATSHOP_COLORS,
+  MEATSHOP_INPUT,
+  MEATSHOP_PILL,
+  MeatshopBottomTabBar,
+  MeatshopPageHero,
+  MeatshopSectionHeader,
+  MeatshopShell,
+  MeatshopSurfaceCard,
+} from '../../../components/ui/MeatshopChrome';
 import { useInventoryStore } from '../store/useInventoryStore';
 import { fetchInventoryByTenantWithProducts } from '../services/inventoryService';
 import { useTenantStore } from '../../tenant/store/useTenantStore';
 import firebaseConfig from '../../../config/firebaseConfig';
-import { FloatingAddButton } from '../components/InventoryUI';
 
-const MAROON = '#6B1A2A';
-const MAROON_DARK = '#5A1220';
-const CREAM = '#F2EDE4';
-const CARD = '#FFFFFF';
-const BORDER = '#E8DDD2';
-const TEXT_DARK = '#1A1411';
-const TEXT_MID = '#7A7061';
-const TEXT_LIGHT = '#9A8A78';
-
-function SnapshotFallback({ tenantId, setSummaries }: { tenantId: string | null; setSummaries: (s: any[]) => void; }) {
+function SnapshotFallback({
+  tenantId,
+  setSummaries,
+}: {
+  tenantId: string | null;
+  setSummaries: (summaries: any[]) => void;
+}) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -51,160 +60,118 @@ function SnapshotFallback({ tenantId, setSummaries }: { tenantId: string | null;
         if (mounted) setLoading(false);
       }
     }
-    load();
-    return () => { mounted = false; };
+    void load();
+    return () => {
+      mounted = false;
+    };
   }, [tenantId, setSummaries]);
 
-  if (loading) return <View style={styles.feedbackBlock}><ActivityIndicator /></View>;
-  if (err) return <View style={styles.feedbackBlock}><Text style={styles.feedbackText}>{err}</Text></View>;
+  if (loading) {
+    return (
+      <MeatshopSurfaceCard>
+        <View style={styles.feedbackRow}>
+          <ActivityIndicator color={MEATSHOP_COLORS.maroon} />
+          <Text style={styles.feedbackText}>Loading fallback inventory snapshot...</Text>
+        </View>
+      </MeatshopSurfaceCard>
+    );
+  }
+
+  if (err) {
+    return (
+      <MeatshopSurfaceCard>
+        <Text style={styles.feedbackText}>{err}</Text>
+      </MeatshopSurfaceCard>
+    );
+  }
+
   return null;
 }
 
-// ── Components ─────────────────────────────────────────────────────────────────
-
-function Header({ tenantId, onBack }: { tenantId: string | null; onBack: () => void }) {
+function StatCard({
+  icon,
+  value,
+  label,
+  bubbleColor,
+}: {
+  icon: ReactNode;
+  value: string;
+  label: string;
+  bubbleColor: string;
+}) {
   return (
-    <View style={headerStyles.header}>
-      <Pressable style={headerStyles.headerBtn} onPress={onBack}>
-        <Text style={headerStyles.hamburger}>☰</Text>
-      </Pressable>
-
-      <View style={headerStyles.headerLogoBlock}>
-        <Text style={headerStyles.headerTitle}>Inventory</Text>
-      </View>
-
-      <Pressable style={headerStyles.headerBtn}>
-        <Text style={headerStyles.bellIcon}>🔔</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function PageHeaderTitle({ tenantId }: { tenantId: string | null }) {
-  return (
-    <View style={styles.pageHeader}>
-      <View style={styles.pageHeaderLeft}>
-        <Image source={require('../../../../assets/logo.png')} style={styles.pageHeaderLogo} resizeMode="contain" />
-      </View>
-      <View style={styles.pageHeaderTextWrap}>
-        <Text style={styles.pageTitle}>MEATSHOP</Text>
-        <Text style={styles.pageSubtitle}>PREMIUM QUALITY MEATS</Text>
-      </View>
-      <Text style={styles.tenantMeta}>Tenant: {tenantId ?? '—'}</Text>
-    </View>
-  );
-}
-
-function StatCard({ icon, value, label, sublabel, type }: { icon: string; value: string; label: string; sublabel: string; type: 'default'|'warning'|'danger' }) {
-  const iconBg = type === 'warning' ? MAROON : type === 'danger' ? MAROON_DARK : MAROON_DARK;
-  return (
-    <View style={cardStyles.statCard}>
-      <View style={[cardStyles.statIconCircle, { backgroundColor: iconBg }]}>
-        <Text style={cardStyles.statIconText}>{icon}</Text>
-      </View>
-      <View style={cardStyles.statTextWrap}>
-        <View style={cardStyles.statValueRow}>
-          <Text style={cardStyles.statValue}>{value}</Text>
-        </View>
-        <Text style={cardStyles.statLabel}>{label}</Text>
-        <Text style={cardStyles.statSublabel}>{sublabel}</Text>
+    <View style={styles.statCard}>
+      <View style={[styles.statBubble, { backgroundColor: bubbleColor }]}>{icon}</View>
+      <View style={styles.statCopy}>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
       </View>
     </View>
   );
 }
 
-function SearchBar({ value, onChange, onFilter }: { value: string; onChange: (v: string) => void; onFilter: () => void }) {
-  return (
-    <View style={searchStyles.container}>
-      <View style={searchStyles.inputWrap}>
-        <Text style={searchStyles.searchIcon}>🔍</Text>
-        <TextInput
-          style={searchStyles.input}
-          placeholder="Search meat or category..."
-          placeholderTextColor={TEXT_LIGHT}
-          value={value}
-          onChangeText={onChange}
-        />
-      </View>
-      <Pressable style={searchStyles.filterBtn} onPress={onFilter}>
-        <Text style={searchStyles.filterBtnText}>Filter ≑</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function ItemCard({ summary, onAction }: { summary: any; onAction: (a: string) => void }) {
+function InventoryItemCard({ summary, onAction }: { summary: any; onAction: (action: string) => void }) {
   const shortName = (summary.productName || summary.productId || '').substring(0, 2).toUpperCase();
-  const inStock = (summary.totalQuantity ?? 0) > 0;
-  
+  const quantity = Number(summary.totalQuantity ?? 0);
+  const isOut = quantity <= 0;
+  const isLow = Boolean(summary.lowStock) && !isOut;
+
+  const statusLabel = isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock';
+  const statusStyle = isOut
+    ? styles.statusPillDanger
+    : isLow
+      ? styles.statusPillWarning
+      : styles.statusPillSuccess;
+  const statusTextStyle = isOut
+    ? styles.statusTextDanger
+    : isLow
+      ? styles.statusTextWarning
+      : styles.statusTextSuccess;
+
   return (
-    <View style={itemStyles.card}>
-      <View style={itemStyles.topRow}>
-        <View style={itemStyles.avatarWrap}>
-          <Text style={itemStyles.avatarText}>{shortName}</Text>
+    <View style={styles.itemCard}>
+      <View style={styles.itemTopRow}>
+        <View style={styles.itemAvatar}>
+          <Text style={styles.itemAvatarText}>{shortName}</Text>
         </View>
-        
-        <View style={itemStyles.infoWrap}>
-          <Text style={itemStyles.name}>{summary.productName || summary.productId}</Text>
-          <View style={itemStyles.tagRow}>
-            <View style={itemStyles.tag}><Text style={itemStyles.tagText}>Fresh</Text></View>
-            <View style={itemStyles.tag}><Text style={itemStyles.tagText}>Meat</Text></View>
+
+        <View style={styles.itemMain}>
+          <Text style={styles.itemName}>{summary.productName || summary.productId}</Text>
+          <View style={styles.itemMetaRow}>
+            <View style={styles.itemPill}>
+              <Text style={styles.itemPillText}>Fresh</Text>
+            </View>
+            <View style={styles.itemPill}>
+              <Text style={styles.itemPillText}>Meat</Text>
+            </View>
           </View>
-          <Text style={itemStyles.metaText}>
-            {summary.totalQuantity ?? 0} {summary.unit ?? 'kg'} • Batches: {summary.batchesCount ?? 0}
+          <Text style={styles.itemMetaText}>
+            {quantity} {summary.unit ?? 'kg'} • Batches: {summary.batchesCount ?? 0}
           </Text>
         </View>
 
-        <View style={[itemStyles.statusPill, inStock ? itemStyles.statusPillIn : itemStyles.statusPillOut]}>
-          <View style={[itemStyles.statusDot, inStock ? itemStyles.statusDotIn : itemStyles.statusDotOut]} />
-          <Text style={[itemStyles.statusText, inStock ? itemStyles.statusTextIn : itemStyles.statusTextOut]}>
-            {inStock ? 'In Stock' : 'Out'}
-          </Text>
+        <View style={[styles.statusPill, statusStyle]}>
+          <Text style={[styles.statusText, statusTextStyle]}>{statusLabel}</Text>
         </View>
       </View>
 
-      <View style={itemStyles.actionRow}>
-        <Pressable style={itemStyles.actionBtn} onPress={() => onAction('in')}>
-          <Text style={itemStyles.actionBtnText}>Stock In</Text>
+      <View style={styles.itemActions}>
+        <Pressable style={styles.itemActionButton} onPress={() => onAction('in')}>
+          <Text style={styles.itemActionText}>Stock In</Text>
         </Pressable>
-        <Pressable style={itemStyles.actionBtn} onPress={() => onAction('out')}>
-          <Text style={itemStyles.actionBtnText}>Stock Out</Text>
+        <Pressable style={styles.itemActionButton} onPress={() => onAction('out')}>
+          <Text style={styles.itemActionText}>Stock Out</Text>
         </Pressable>
-        <Pressable style={itemStyles.actionBtn} onPress={() => onAction('adjust')}>
-          <Text style={itemStyles.actionBtnText}>Adjust</Text>
+        <Pressable style={styles.itemActionButton} onPress={() => onAction('adjust')}>
+          <Text style={styles.itemActionText}>Adjust</Text>
         </Pressable>
-        <Pressable style={itemStyles.actionBtn} onPress={() => onAction('history')}>
-          <Text style={itemStyles.actionBtnText}>History</Text>
+        <Pressable style={styles.itemActionButton} onPress={() => onAction('history')}>
+          <Text style={styles.itemActionText}>History</Text>
         </Pressable>
       </View>
     </View>
   );
 }
-
-function BottomTabBar({ onDashboard, onPlans, onReports }: { onDashboard: () => void; onPlans: () => void; onReports: () => void; }) {
-  return (
-    <View style={tabStyles.tabBar}>
-      <Pressable style={tabStyles.tab} onPress={onDashboard}>
-        <Text style={tabStyles.tabIcon}>⌂</Text>
-        <Text style={tabStyles.tabLabel}>Dashboard</Text>
-      </Pressable>
-      <Pressable style={tabStyles.tab} onPress={onPlans}>
-        <Text style={tabStyles.tabIcon}>📋</Text>
-        <Text style={tabStyles.tabLabel}>Plans</Text>
-      </Pressable>
-      <View style={[tabStyles.tab, tabStyles.tabActive]}>
-        <Text style={tabStyles.tabIconActive}>🥩</Text>
-        <Text style={tabStyles.tabLabelActive}>Inventory</Text>
-      </View>
-      <Pressable style={tabStyles.tab} onPress={onReports}>
-        <Text style={tabStyles.tabIcon}>📊</Text>
-        <Text style={tabStyles.tabLabel}>Reports</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-// ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function InventoryListScreen() {
   const router = useRouter();
@@ -213,13 +180,19 @@ export default function InventoryListScreen() {
   const setSummaries = useInventoryStore((state) => state.setSummaries);
   const loading = useInventoryStore((state) => state.loading);
   const setLoading = useInventoryStore((state) => state.setLoading);
-  const [q, setQ] = useState('');
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     let mounted = true;
     async function load() {
-      if (!tenantId) { setLoading(false); return; }
-      if (!firebaseConfig || (firebaseConfig.apiKey ?? '').includes('YOUR_API_KEY')) { setLoading(false); return; }
+      if (!tenantId) {
+        setLoading(false);
+        return;
+      }
+      if (!firebaseConfig || (firebaseConfig.apiKey ?? '').includes('YOUR_API_KEY')) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         let data = await fetchInventoryByTenantWithProducts(tenantId);
@@ -235,283 +208,378 @@ export default function InventoryListScreen() {
         if (mounted) setLoading(false);
       }
     }
-    load();
-    return () => { mounted = false; };
+    void load();
+    return () => {
+      mounted = false;
+    };
   }, [setLoading, setSummaries, tenantId]);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <Header tenantId={tenantId} onBack={() => router.back()} />
+  const filteredSummaries = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return summaries.filter((item) =>
+      normalized.length === 0
+        ? true
+        : String(item.productName ?? item.productId).toLowerCase().includes(normalized),
+    );
+  }, [query, summaries]);
 
-      {(!firebaseConfig || (firebaseConfig.apiKey ?? '').includes('YOUR_API_KEY')) && (
-        <SnapshotFallback tenantId={tenantId} setSummaries={setSummaries as any} />
-      )}
+  const lowStockCount = summaries.filter((item: any) => item.lowStock).length;
+  const outOfStockCount = summaries.filter((item: any) => Number(item.totalQuantity ?? 0) <= 0).length;
+  const isUsingFallback = !firebaseConfig || (firebaseConfig.apiKey ?? '').includes('YOUR_API_KEY');
 
-      <View style={{ paddingHorizontal: 16 }}>
-        <PageHeaderTitle tenantId={tenantId} />
-
-        <View style={styles.statsRow}>
-          <StatCard
-            type="default"
-            icon="🥩"
-            value={String(summaries?.length ?? 0)}
-            label="Total Items"
-            sublabel="All items"
-          />
-          <StatCard
-            type="warning"
-            icon="⚠️"
-            value={String(summaries?.filter((s: any) => s.lowStock).length ?? 0)}
-            label="Low Stock"
-            sublabel="Need attention"
-          />
-          <StatCard
-            type="danger"
-            icon="📦"
-            value={String(summaries?.filter((s: any) => (s.totalQuantity ?? 0) <= 0).length ?? 0)}
-            label="Out of Stock"
-            sublabel="Unavailable"
-          />
+  const listHeader = (
+    <View style={styles.headerContent}>
+      <MeatshopPageHero
+        eyebrow="Inventory"
+        title="Inventory"
+        subtitle="Track stock health, adjust quantities, and jump into inventory actions using the same visual language as the dashboard."
+      >
+        <View style={styles.heroMetaRow}>
+          <View style={styles.heroMetaPill}>
+            <MaterialCommunityIcons name="storefront-outline" size={16} color={MEATSHOP_COLORS.maroon} />
+            <Text style={styles.heroMetaText}>{tenantId ?? 'No tenant selected'}</Text>
+          </View>
         </View>
+      </MeatshopPageHero>
 
-        <SearchBar value={q} onChange={setQ} onFilter={() => {}} />
+      {isUsingFallback ? (
+        <SnapshotFallback tenantId={tenantId} setSummaries={setSummaries as any} />
+      ) : null}
+
+      <MeatshopSectionHeader
+        title="Overview"
+        icon={<Feather name="bar-chart-2" size={18} color={MEATSHOP_COLORS.maroon} />}
+      />
+
+      <View style={styles.statsGrid}>
+        <StatCard
+          icon={<MaterialCommunityIcons name="package-variant-closed" size={28} color={MEATSHOP_COLORS.maroon} />}
+          value={String(summaries.length)}
+          label="Total Items"
+          bubbleColor={MEATSHOP_COLORS.roseTint}
+        />
+        <StatCard
+          icon={<MaterialCommunityIcons name="alert-outline" size={28} color={MEATSHOP_COLORS.gold} />}
+          value={String(lowStockCount)}
+          label="Low Stock"
+          bubbleColor={MEATSHOP_COLORS.sandTint}
+        />
+        <StatCard
+          icon={<MaterialCommunityIcons name="close-octagon-outline" size={28} color={MEATSHOP_COLORS.maroon} />}
+          value={String(outOfStockCount)}
+          label="Out of Stock"
+          bubbleColor={MEATSHOP_COLORS.roseTint}
+        />
       </View>
 
+      <MeatshopSectionHeader
+        title="Find Items"
+        icon={<Feather name="search" size={18} color={MEATSHOP_COLORS.maroon} />}
+      />
+
+      <MeatshopSurfaceCard style={styles.searchCard}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search meat or category..."
+          placeholderTextColor={MEATSHOP_COLORS.soft}
+          value={query}
+          onChangeText={setQuery}
+        />
+        <Text style={styles.resultsMeta}>
+          Showing {filteredSummaries.length} of {summaries.length} items
+        </Text>
+      </MeatshopSurfaceCard>
+    </View>
+  );
+
+  return (
+    <MeatshopShell>
+      <View style={styles.topBar}>
+        <Text style={styles.topBarTitle}>Inventory</Text>
+      </View>
+      <View style={styles.topDivider} />
+
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator /></View>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={MEATSHOP_COLORS.maroon} />
+        </View>
       ) : (
         <FlatList
           style={styles.list}
           contentContainerStyle={styles.listContent}
-          data={summaries}
+          data={filteredSummaries}
           keyExtractor={(item) => item.productId}
-          renderItem={({ item }) => {
-            if (q && !String(item.productName ?? item.productId).toLowerCase().includes(q.toLowerCase())) return null;
-            return (
-              <ItemCard
-                summary={item}
-                onAction={(a) => {
-                  if (a === 'in') router.push(`/inventory/stock-in?productId=${encodeURIComponent(item.productId)}`);
-                  if (a === 'out') router.push(`/inventory/stock-out?productId=${encodeURIComponent(item.productId)}`);
-                  if (a === 'adjust') router.push(`/inventory/adjust?productId=${encodeURIComponent(item.productId)}`);
-                  if (a === 'history') router.push(`/inventory/transactions?productId=${encodeURIComponent(item.productId)}`);
-                }}
-              />
-            );
-          }}
-          ListEmptyComponent={() => (
-            <View style={styles.empty}><Text style={styles.emptyText}>No inventory records found.</Text></View>
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={listHeader}
+          ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+          renderItem={({ item }) => (
+            <InventoryItemCard
+              summary={item}
+              onAction={(action) => {
+                if (action === 'in') router.push(`/inventory/stock-in?productId=${encodeURIComponent(item.productId)}`);
+                if (action === 'out') router.push(`/inventory/stock-out?productId=${encodeURIComponent(item.productId)}`);
+                if (action === 'adjust') router.push(`/inventory/adjust?productId=${encodeURIComponent(item.productId)}`);
+                if (action === 'history') router.push(`/inventory/transactions?productId=${encodeURIComponent(item.productId)}`);
+              }}
+            />
           )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No inventory records found.</Text>
+            </View>
+          }
+          ListFooterComponent={
+            <Pressable style={styles.addItemButton} onPress={() => router.push('/inventory/stock-in')}>
+              <MaterialCommunityIcons name="plus-circle-outline" size={22} color="#FFFFFF" />
+              <Text style={styles.addItemButtonText}>Add Item</Text>
+            </Pressable>
+          }
         />
       )}
 
-      <View style={styles.footerAction}>
-        <Pressable style={styles.addItemBtn} onPress={() => router.push('/inventory/stock-in')}>
-          <Text style={styles.addItemBtnIcon}>⊕</Text>
-          <Text style={styles.addItemBtnText}>Add Item</Text>
-        </Pressable>
-      </View>
-
-      <BottomTabBar
+      <MeatshopBottomTabBar
+        active="inventory"
         onDashboard={() => router.push('/dashboard')}
         onPlans={() => router.push('/plans')}
+        onInventory={() => router.push('/inventory')}
         onReports={() => router.push('/reports')}
       />
-    </SafeAreaView>
+    </MeatshopShell>
   );
 }
 
-// ── Style Sheets ──────────────────────────────────────────────────────────────
-
-const headerStyles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: CREAM,
-  },
-  headerBtn: { padding: 6 },
-  hamburger: { fontSize: 24, color: MAROON, fontWeight: '600' },
-  headerLogoBlock: { alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: MAROON_DARK },
-  bellIcon: { fontSize: 22, color: MAROON_DARK },
-});
-
-const tabStyles = StyleSheet.create({
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    paddingBottom: 8,
+const styles = StyleSheet.create({
+  topBar: {
+    minHeight: 66,
+    paddingHorizontal: 18,
     paddingTop: 10,
+    paddingBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  tab: { flex: 1, alignItems: 'center', gap: 3 },
-  tabActive: { borderTopWidth: 2, borderTopColor: MAROON_DARK, paddingTop: 4 },
-  tabIcon: { fontSize: 20, color: '#A59B8E' },
-  tabIconActive: { fontSize: 20, color: MAROON_DARK },
-  tabLabel: { fontSize: 10, color: '#A59B8E', fontWeight: '600' },
-  tabLabelActive: { fontSize: 10, color: MAROON_DARK, fontWeight: '700' },
-});
-
-const cardStyles = StyleSheet.create({
-  statCard: {
+  topBarTitle: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  topDivider: {
+    height: 1,
+    backgroundColor: '#E8DDD2',
+  },
+  list: {
     flex: 1,
-    backgroundColor: CARD,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: BORDER,
+    backgroundColor: 'transparent',
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 26,
+  },
+  headerContent: {
+    gap: 20,
+    marginBottom: 20,
+  },
+  feedbackRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  statIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+  feedbackText: {
+    color: MEATSHOP_COLORS.muted,
+    lineHeight: 21,
   },
-  statIconText: { fontSize: 16, color: '#FFFFFF' },
-  statTextWrap: { flex: 1 },
-  statValueRow: { flexDirection: 'row', alignItems: 'center' },
-  statValue: { fontSize: 20, fontWeight: '800', color: TEXT_DARK },
-  statLabel: { fontSize: 11, color: TEXT_DARK, fontWeight: '600', marginTop: 1 },
-  statSublabel: { fontSize: 9, color: TEXT_MID, marginTop: 1 },
-});
-
-const searchStyles = StyleSheet.create({
-  container: {
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  heroMetaPill: {
+    ...MEATSHOP_PILL,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginVertical: 12,
   },
-  inputWrap: {
+  heroMetaText: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  statsGrid: {
+    gap: 12,
+  },
+  statCard: {
+    backgroundColor: MEATSHOP_COLORS.surface,
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: MEATSHOP_COLORS.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    ...MEATSHOP_CARD_SHADOW,
+  },
+  statBubble: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statCopy: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: CARD,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: BORDER,
-    paddingHorizontal: 12,
-    height: 44,
   },
-  searchIcon: { fontSize: 16, marginRight: 8, color: TEXT_LIGHT },
-  input: { flex: 1, fontSize: 14, color: TEXT_DARK },
-  filterBtn: {
-    backgroundColor: CARD,
-    borderRadius: 12,
+  statValue: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  statLabel: {
+    color: MEATSHOP_COLORS.muted,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  searchCard: {
+    gap: 10,
+  },
+  searchInput: {
+    ...MEATSHOP_INPUT,
+  },
+  resultsMeta: {
+    color: MEATSHOP_COLORS.muted,
+    fontSize: 13,
+  },
+  itemSeparator: {
+    height: 12,
+  },
+  itemCard: {
+    backgroundColor: MEATSHOP_COLORS.surface,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: BORDER,
-    paddingHorizontal: 14,
-    height: 44,
+    borderColor: MEATSHOP_COLORS.border,
+    padding: 18,
+    ...MEATSHOP_CARD_SHADOW,
+  },
+  itemTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  itemAvatar: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  filterBtnText: { fontSize: 14, fontWeight: '700', color: MAROON_DARK },
-});
-
-const itemStyles = StyleSheet.create({
-  card: {
-    backgroundColor: CARD,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 14,
-    marginBottom: 10,
+  itemAvatarText: {
+    color: MEATSHOP_COLORS.maroonDark,
+    fontWeight: '900',
+    fontSize: 18,
   },
-  topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  avatarWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#F3ECE1',
-    alignItems: 'center',
-    justifyContent: 'center',
+  itemMain: {
+    flex: 1,
   },
-  avatarText: { fontSize: 18, fontWeight: '800', color: MAROON_DARK },
-  infoWrap: { flex: 1 },
-  name: { fontSize: 16, fontWeight: '800', color: TEXT_DARK, marginBottom: 4 },
-  tagRow: { flexDirection: 'row', gap: 6, marginBottom: 4 },
-  tag: { backgroundColor: '#F8F3EA', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  tagText: { fontSize: 10, color: MAROON_DARK, fontWeight: '600' },
-  metaText: { fontSize: 12, color: TEXT_MID },
-  statusPill: {
+  itemName: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  itemMetaRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    gap: 6,
+    marginTop: 8,
+  },
+  itemPill: {
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
+  },
+  itemPillText: {
+    color: MEATSHOP_COLORS.maroonDark,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  itemMetaText: {
+    marginTop: 8,
+    color: MEATSHOP_COLORS.muted,
+    fontSize: 13,
+  },
+  statusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderWidth: 1,
   },
-  statusPillIn: { backgroundColor: '#F0F9F4', borderColor: '#C3E6D1' },
-  statusPillOut: { backgroundColor: '#FEF0F0', borderColor: '#FAD2D2' },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusDotIn: { backgroundColor: '#2A8A52' },
-  statusDotOut: { backgroundColor: MAROON },
-  statusText: { fontSize: 11, fontWeight: '700' },
-  statusTextIn: { color: '#2A8A52' },
-  statusTextOut: { color: MAROON },
-  actionRow: {
+  statusPillSuccess: {
+    backgroundColor: MEATSHOP_COLORS.successBg,
+    borderColor: '#CFE7D7',
+  },
+  statusPillWarning: {
+    backgroundColor: '#FFF6E7',
+    borderColor: '#F2D9A6',
+  },
+  statusPillDanger: {
+    backgroundColor: MEATSHOP_COLORS.dangerBg,
+    borderColor: MEATSHOP_COLORS.dangerBorder,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  statusTextSuccess: {
+    color: MEATSHOP_COLORS.successText,
+  },
+  statusTextWarning: {
+    color: '#B97909',
+  },
+  statusTextDanger: {
+    color: MEATSHOP_COLORS.dangerText,
+  },
+  itemActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 16,
+  },
+  itemActionButton: {
+    ...MEATSHOP_PILL,
+    paddingVertical: 8,
+  },
+  itemActionText: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  emptyState: {
+    paddingVertical: 28,
     alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-    marginLeft: 60, // align with infoWrap
   },
-  actionBtn: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E8DED0',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+  emptyText: {
+    color: MEATSHOP_COLORS.muted,
+    fontSize: 15,
   },
-  actionBtnText: { fontSize: 11, fontWeight: '700', color: '#4A4136' },
-});
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: CREAM },
-  feedbackBlock: { padding: 20 },
-  feedbackText: { color: '#7C7464' },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  
-  pageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingBottom: 16,
-  },
-  pageHeaderLeft: { width: 60 },
-  pageHeaderLogo: { width: 100, height: 45, marginLeft: -20 },
-  pageHeaderTextWrap: { flex: 1 },
-  pageTitle: { fontSize: 18, fontWeight: '800', color: '#1F1A14', letterSpacing: 1.5 },
-  pageSubtitle: { fontSize: 8, color: '#6E6456', letterSpacing: 1 },
-  tenantMeta: { fontSize: 10, color: TEXT_MID },
-
-  statsRow: { flexDirection: 'row', gap: 8 },
-
-  list: { flex: 1 },
-  listContent: { paddingHorizontal: 16, paddingBottom: 20 },
-  
-  footerAction: { paddingHorizontal: 16, paddingBottom: 12, paddingTop: 4 },
-  addItemBtn: {
-    backgroundColor: MAROON_DARK,
-    borderRadius: 12,
-    paddingVertical: 14,
+  addItemButton: {
+    marginTop: 20,
+    minHeight: 58,
+    borderRadius: 22,
+    backgroundColor: MEATSHOP_COLORS.maroonDark,
+    paddingHorizontal: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
   },
-  addItemBtnIcon: { fontSize: 18, color: '#FFFFFF', marginTop: -2 },
-  addItemBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
-
-  empty: { padding: 20, alignItems: 'center' },
-  emptyText: { color: TEXT_MID },
+  addItemButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
 });

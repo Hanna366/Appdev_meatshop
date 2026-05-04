@@ -1,16 +1,29 @@
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 
+import {
+  MEATSHOP_CARD_SHADOW,
+  MEATSHOP_COLORS,
+  MEATSHOP_INPUT,
+  MEATSHOP_PILL,
+  MeatshopHeaderIconButton,
+  MeatshopPageHeader,
+  MeatshopPageHero,
+  MeatshopSectionHeader,
+  MeatshopShell,
+  MeatshopSurfaceCard,
+} from '../src/components/ui/MeatshopChrome';
 import { LockedFeatureNotice } from '../src/components/ui/LockedFeatureNotice';
 import { hasPermission } from '../src/features/access/services/accessControl';
 import { useAuditLogStore } from '../src/features/audit/store/useAuditLogStore';
@@ -39,8 +52,6 @@ const FILTERS: Array<'All' | ProductType> = [
 
 const PRODUCT_TYPES: ProductType[] = ['Prime', 'Premium', 'Select', 'Choice', 'Byproduct'];
 
-const PRIMARY = '#B23A1D';
-
 type ProductFormState = {
   name: string;
   type: ProductType;
@@ -56,6 +67,7 @@ const EMPTY_FORM: ProductFormState = {
 };
 
 export default function ProductsScreen() {
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const activeTenantId = useTenantStore((state) => state.activeTenantId);
   const products = useProductStore((state) => state.products);
@@ -137,7 +149,7 @@ export default function ProductsScreen() {
       }
     }
 
-    load();
+    void load();
 
     return () => {
       mounted = false;
@@ -179,33 +191,6 @@ export default function ProductsScreen() {
       })
       .sort((left, right) => left.name.localeCompare(right.name));
   }, [activeFilter, products, query]);
-
-  if (!canViewProducts) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.blockedState}>
-          <Text style={styles.blockedTitle}>Access Restricted</Text>
-          <Text style={styles.blockedText}>
-            Your current role does not allow access to the product catalog.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!catalogEntitlement.allowed) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.blockedState}>
-          <LockedFeatureNotice
-            title="Feature Locked"
-            message={catalogEntitlement.message ?? 'Product catalog is not available for this plan.'}
-            requiredPlan={catalogEntitlement.requiredPlan}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   function clearSelection() {
     setSelectedId(null);
@@ -388,146 +373,166 @@ export default function ProductsScreen() {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.headerBlock}>
-        <Text style={styles.title}>Products</Text>
-        <Text style={styles.subtitle}>Create, view, update, and delete catalog items.</Text>
+  const listHeader = (
+    <View style={styles.headerContent}>
+      <MeatshopPageHero
+        eyebrow="Catalog"
+        title="Products"
+        subtitle="Create, search, and manage your catalog using the same polished layout as the dashboard."
+      >
+        <View style={styles.heroMetaRow}>
+          <View style={styles.heroMetaPill}>
+            <MaterialCommunityIcons name="food-steak" size={16} color={MEATSHOP_COLORS.maroon} />
+            <Text style={styles.heroMetaText}>{products.length} total items</Text>
+          </View>
+          <View style={styles.heroMetaPill}>
+            <MaterialCommunityIcons name="filter-variant" size={16} color={MEATSHOP_COLORS.gold} />
+            <Text style={styles.heroMetaText}>{visibleProducts.length} visible</Text>
+          </View>
+        </View>
+      </MeatshopPageHero>
 
-        {canEditProducts ? (
-          <View style={styles.formCard}>
-            <View style={styles.formHeader}>
-              <View>
-                <Text style={styles.formTitle}>
-                  {selectedProduct ? 'Edit Product' : 'Add Product'}
-                </Text>
-                <Text style={styles.formMeta}>
-                  {selectedProduct
-                    ? 'Select a different item below or update the fields here.'
-                    : 'Fill in the form and save to create a new product.'}
-                </Text>
-              </View>
-              {selectedProduct ? (
-                <Pressable onPress={clearSelection} style={styles.ghostButton}>
-                  <Text style={styles.ghostButtonText}>New</Text>
+      <MeatshopSectionHeader
+        title={canEditProducts ? 'Editor' : 'Catalog Access'}
+        icon={<Feather name="edit-3" size={18} color={MEATSHOP_COLORS.maroon} />}
+      />
+
+      {canEditProducts ? (
+        <MeatshopSurfaceCard style={styles.formCard}>
+          <View style={styles.formHeader}>
+            <View style={styles.formHeaderCopy}>
+              <Text style={styles.formTitle}>{selectedProduct ? 'Edit Product' : 'Add Product'}</Text>
+              <Text style={styles.formMeta}>
+                {selectedProduct
+                  ? 'Update the selected item or clear the form to create a new one.'
+                  : 'Fill in the fields below to add a new product to the catalog.'}
+              </Text>
+            </View>
+            {selectedProduct ? (
+              <Pressable onPress={clearSelection} style={styles.ghostButton}>
+                <Text style={styles.ghostButtonText}>New</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          <Text style={styles.fieldLabel}>Product Name</Text>
+          <TextInput
+            value={form.name}
+            onChangeText={(name) => setForm((current) => ({ ...current, name }))}
+            placeholder="e.g. Ribeye Steak"
+            placeholderTextColor={MEATSHOP_COLORS.soft}
+            style={styles.input}
+          />
+
+          <Text style={styles.fieldLabel}>Type</Text>
+          <FlatList
+            data={PRODUCT_TYPES}
+            horizontal
+            keyExtractor={(item) => item}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.typeSelector}
+            renderItem={({ item }) => {
+              const isActive = form.type === item;
+
+              return (
+                <Pressable
+                  onPress={() => setForm((current) => ({ ...current, type: item }))}
+                  style={[styles.chip, isActive && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{item}</Text>
                 </Pressable>
-              ) : null}
+              );
+            }}
+          />
+
+          <View style={styles.row}>
+            <View style={styles.rowField}>
+              <Text style={styles.fieldLabel}>Price</Text>
+              <TextInput
+                value={form.price}
+                onChangeText={(price) => setForm((current) => ({ ...current, price }))}
+                placeholder="0.00"
+                placeholderTextColor={MEATSHOP_COLORS.soft}
+                keyboardType="numeric"
+                style={styles.input}
+              />
             </View>
+            <View style={styles.rowField}>
+              <Text style={styles.fieldLabel}>Stock</Text>
+              <TextInput
+                value={form.stock}
+                onChangeText={(stock) => setForm((current) => ({ ...current, stock }))}
+                placeholder="0"
+                placeholderTextColor={MEATSHOP_COLORS.soft}
+                keyboardType="numeric"
+                style={styles.input}
+              />
+            </View>
+          </View>
 
-            <Text style={styles.fieldLabel}>Product Name</Text>
-            <TextInput
-              value={form.name}
-              onChangeText={(name) => setForm((current) => ({ ...current, name }))}
-              placeholder="e.g. Ribeye Steak"
-              placeholderTextColor="#8A8A8A"
-              style={styles.input}
-            />
+          <Text style={styles.fieldHint}>Unit is currently fixed to kilograms (`kg`).</Text>
 
-            <Text style={styles.fieldLabel}>Type</Text>
-            <FlatList
-              data={PRODUCT_TYPES}
-              horizontal
-              keyExtractor={(item) => item}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.typeSelector}
-              renderItem={({ item }) => {
-                const isActive = form.type === item;
-
-                return (
-                  <Pressable
-                    onPress={() => setForm((current) => ({ ...current, type: item }))}
-                    style={[styles.chip, isActive && styles.chipActive]}
-                  >
-                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{item}</Text>
-                  </Pressable>
-                );
+          <View style={styles.actionRow}>
+            <Pressable
+              onPress={() => {
+                void handleSave();
               }}
-            />
+              disabled={saving || deleting}
+              style={[styles.primaryButton, (saving || deleting) && styles.buttonDisabled]}
+            >
+              <Text style={styles.primaryButtonText}>
+                {selectedProduct
+                  ? saving
+                    ? 'Saving...'
+                    : 'Update Product'
+                  : saving
+                    ? 'Creating...'
+                    : 'Create Product'}
+              </Text>
+            </Pressable>
 
-            <View style={styles.row}>
-              <View style={styles.rowField}>
-                <Text style={styles.fieldLabel}>Price</Text>
-                <TextInput
-                  value={form.price}
-                  onChangeText={(price) => setForm((current) => ({ ...current, price }))}
-                  placeholder="0.00"
-                  placeholderTextColor="#8A8A8A"
-                  keyboardType="numeric"
-                  style={styles.input}
-                />
-              </View>
-              <View style={styles.rowField}>
-                <Text style={styles.fieldLabel}>Stock</Text>
-                <TextInput
-                  value={form.stock}
-                  onChangeText={(stock) => setForm((current) => ({ ...current, stock }))}
-                  placeholder="0"
-                  placeholderTextColor="#8A8A8A"
-                  keyboardType="numeric"
-                  style={styles.input}
-                />
-              </View>
-            </View>
+            <Pressable
+              onPress={clearSelection}
+              disabled={saving || deleting}
+              style={[styles.secondaryButton, (saving || deleting) && styles.buttonDisabled]}
+            >
+              <Text style={styles.secondaryButtonText}>
+                {selectedProduct ? 'Cancel Edit' : 'Clear Form'}
+              </Text>
+            </Pressable>
 
-            <Text style={styles.fieldHint}>Unit is currently fixed to kilograms (`kg`).</Text>
-
-            <View style={styles.actionRow}>
-              <Pressable
-                onPress={() => {
-                  void handleSave();
-                }}
-                disabled={saving || deleting}
-                style={[styles.primaryButton, (saving || deleting) && styles.buttonDisabled]}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {selectedProduct
-                    ? saving
-                      ? 'Saving...'
-                      : 'Update Product'
-                    : saving
-                      ? 'Creating...'
-                      : 'Create Product'}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={clearSelection}
-                disabled={saving || deleting}
-                style={[styles.secondaryButton, (saving || deleting) && styles.buttonDisabled]}
-              >
-                <Text style={styles.secondaryButtonText}>
-                  {selectedProduct ? 'Cancel Edit' : 'Clear Form'}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={requestDelete}
-                disabled={!selectedProduct || saving || deleting}
-                style={[
-                  styles.deleteButton,
-                  (!selectedProduct || saving || deleting) && styles.buttonDisabled,
-                ]}
-              >
-                <Text style={styles.deleteButtonText}>
-                  {deleting ? 'Deleting...' : 'Delete'}
-                </Text>
-              </Pressable>
-            </View>
+            <Pressable
+              onPress={requestDelete}
+              disabled={!selectedProduct || saving || deleting}
+              style={[
+                styles.deleteButton,
+                (!selectedProduct || saving || deleting) && styles.buttonDisabled,
+              ]}
+            >
+              <Text style={styles.deleteButtonText}>{deleting ? 'Deleting...' : 'Delete'}</Text>
+            </Pressable>
           </View>
-        ) : (
-          <View style={styles.readOnlyCard}>
-            <Text style={styles.readOnlyTitle}>Read Only</Text>
-            <Text style={styles.readOnlyText}>
-              Your role can view items but cannot create, edit, or delete products.
-            </Text>
-          </View>
-        )}
+        </MeatshopSurfaceCard>
+      ) : (
+        <MeatshopSurfaceCard>
+          <Text style={styles.readOnlyTitle}>Read Only</Text>
+          <Text style={styles.readOnlyText}>
+            Your role can view items but cannot create, edit, or delete products.
+          </Text>
+        </MeatshopSurfaceCard>
+      )}
 
+      <MeatshopSectionHeader
+        title="Catalog"
+        icon={<Feather name="search" size={18} color={MEATSHOP_COLORS.maroon} />}
+      />
+
+      <MeatshopSurfaceCard style={styles.filtersCard}>
         <TextInput
           value={query}
           onChangeText={setQuery}
           placeholder="Search products"
-          placeholderTextColor="#8A8A8A"
+          placeholderTextColor={MEATSHOP_COLORS.soft}
           style={styles.searchInput}
         />
 
@@ -557,7 +562,7 @@ export default function ProductsScreen() {
 
         {loading ? (
           <View style={styles.loadingState}>
-            <ActivityIndicator size="small" color={PRIMARY} />
+            <ActivityIndicator size="small" color={MEATSHOP_COLORS.maroon} />
             <Text style={styles.loadingText}>Loading products...</Text>
           </View>
         ) : null}
@@ -567,124 +572,182 @@ export default function ProductsScreen() {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
-      </View>
+      </MeatshopSurfaceCard>
+    </View>
+  );
 
-      <FlatList
-        data={visibleProducts}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshing={refreshing}
-        onRefresh={() => {
-          void refreshProducts();
+  const blockedBody = !canViewProducts ? (
+    <MeatshopSurfaceCard>
+      <Text style={styles.blockedTitle}>Access Restricted</Text>
+      <Text style={styles.blockedText}>
+        Your current role does not allow access to the product catalog.
+      </Text>
+    </MeatshopSurfaceCard>
+  ) : !catalogEntitlement.allowed ? (
+    <MeatshopSurfaceCard>
+      <LockedFeatureNotice
+        title="Feature Locked"
+        message={catalogEntitlement.message ?? 'Product catalog is not available for this plan.'}
+        requiredPlan={catalogEntitlement.requiredPlan}
+      />
+    </MeatshopSurfaceCard>
+  ) : null;
+
+  return (
+    <MeatshopShell>
+      <MeatshopPageHeader
+        leftAction={{
+          onPress: () => router.back(),
+          children: <Feather name="chevron-left" size={28} color={MEATSHOP_COLORS.maroon} />,
         }}
-        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
-        renderItem={({ item }) => {
-          const isSelected = selectedId === item.id;
-
-          return (
-            <Pressable
-              onPress={() => setSelectedId(item.id)}
-              style={[styles.card, isSelected && styles.cardSelected]}
-            >
-              <View style={styles.cardTopRow}>
-                <Text style={styles.productName}>{item.name}</Text>
-                <View style={styles.typeBadge}>
-                  <Text style={styles.typeBadgeText}>{item.type ?? 'Choice'}</Text>
-                </View>
-              </View>
-
-              <View style={styles.cardBottomRow}>
-                <Text style={styles.metaText}>
-                  Stock: {item.stock ?? 0} {item.unit ?? 'kg'}
-                </Text>
-                <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
-              </View>
-
-              {isSelected ? <Text style={styles.selectedText}>Selected for editing</Text> : null}
-            </Pressable>
-          );
-        }}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No matching products found.</Text>
-          </View>
+        rightActions={
+          <MeatshopHeaderIconButton
+            icon={<MaterialCommunityIcons name="view-grid-outline" size={26} color={MEATSHOP_COLORS.maroon} />}
+            onPress={() => router.push('/dashboard')}
+          />
         }
       />
-    </SafeAreaView>
+
+      {blockedBody ? (
+        <View style={styles.blockedWrap}>{blockedBody}</View>
+      ) : (
+        <FlatList
+          style={styles.list}
+          data={visibleProducts}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={() => {
+            void refreshProducts();
+          }}
+          ListHeaderComponent={listHeader}
+          ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+          renderItem={({ item }) => {
+            const isSelected = selectedId === item.id;
+
+            return (
+              <Pressable onPress={() => setSelectedId(item.id)} style={[styles.card, isSelected && styles.cardSelected]}>
+                <View style={styles.cardTopRow}>
+                  <View style={styles.cardIconBubble}>
+                    <MaterialCommunityIcons name="food-steak" size={26} color={MEATSHOP_COLORS.maroon} />
+                  </View>
+                  <View style={styles.cardCopy}>
+                    <Text style={styles.productName}>{item.name}</Text>
+                    <View style={styles.typeBadge}>
+                      <Text style={styles.typeBadgeText}>{item.type ?? 'Choice'}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.cardBottomRow}>
+                  <Text style={styles.metaText}>
+                    Stock: {item.stock ?? 0} {item.unit ?? 'kg'}
+                  </Text>
+                  <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
+                </View>
+
+                {isSelected ? <Text style={styles.selectedText}>Selected for editing</Text> : null}
+              </Pressable>
+            );
+          }}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No matching products found.</Text>
+            </View>
+          }
+        />
+      )}
+    </MeatshopShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  blockedWrap: {
     flex: 1,
-    backgroundColor: '#F6F6F3',
+    paddingHorizontal: 20,
+    justifyContent: 'center',
   },
-  headerBlock: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 10,
-  },
-  title: {
+  blockedTitle: {
+    color: MEATSHOP_COLORS.text,
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1F1C17',
+    fontWeight: '900',
   },
-  subtitle: {
-    marginTop: 3,
-    marginBottom: 12,
-    fontSize: 14,
-    color: '#6A655B',
+  blockedText: {
+    marginTop: 8,
+    color: MEATSHOP_COLORS.muted,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  list: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  headerContent: {
+    gap: 20,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 26,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  heroMetaPill: {
+    ...MEATSHOP_PILL,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  heroMetaText: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 13,
+    fontWeight: '700',
   },
   formCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5DED1',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
+    gap: 4,
   },
   formHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: 12,
+    marginBottom: 2,
+  },
+  formHeaderCopy: {
+    flex: 1,
   },
   formTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F1C17',
+    fontSize: 20,
+    fontWeight: '800',
+    color: MEATSHOP_COLORS.text,
   },
   formMeta: {
     marginTop: 4,
-    fontSize: 13,
-    color: '#6A655B',
+    fontSize: 14,
+    lineHeight: 22,
+    color: MEATSHOP_COLORS.muted,
   },
   fieldLabel: {
     marginTop: 12,
-    marginBottom: 6,
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#383127',
+    marginBottom: 8,
+    fontSize: 14,
+    fontWeight: '800',
+    color: MEATSHOP_COLORS.text,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5DED1',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1F1C17',
+    ...MEATSHOP_INPUT,
   },
   fieldHint: {
-    marginTop: 10,
+    marginTop: 12,
     fontSize: 12,
-    color: '#6A655B',
+    color: MEATSHOP_COLORS.muted,
   },
   typeSelector: {
-    paddingTop: 2,
-    paddingBottom: 2,
+    paddingVertical: 2,
     gap: 8,
   },
   row: {
@@ -697,107 +760,98 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 14,
+    marginTop: 16,
     flexWrap: 'wrap',
   },
   primaryButton: {
-    backgroundColor: PRIMARY,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: MEATSHOP_COLORS.maroonDark,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 14,
   },
   secondaryButton: {
-    backgroundColor: '#FFFFFF',
+    minHeight: 54,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
     borderWidth: 1,
-    borderColor: '#D9D0C2',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderColor: MEATSHOP_COLORS.border,
   },
   secondaryButtonText: {
-    color: '#4D463A',
-    fontWeight: '700',
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '800',
+    fontSize: 14,
   },
   deleteButton: {
-    backgroundColor: '#FFF1EC',
+    minHeight: 54,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    backgroundColor: MEATSHOP_COLORS.dangerBg,
     borderWidth: 1,
-    borderColor: '#F2D2C6',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderColor: MEATSHOP_COLORS.dangerBorder,
   },
   deleteButtonText: {
-    color: '#A23821',
-    fontWeight: '700',
+    color: MEATSHOP_COLORS.dangerText,
+    fontWeight: '800',
+    fontSize: 14,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   ghostButton: {
-    backgroundColor: '#F3EFE7',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: MEATSHOP_COLORS.border,
   },
   ghostButtonText: {
-    color: '#4D463A',
-    fontWeight: '700',
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '800',
     fontSize: 13,
   },
-  readOnlyCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5DED1',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
-  },
   readOnlyTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1F1C17',
+    fontSize: 18,
+    fontWeight: '800',
+    color: MEATSHOP_COLORS.text,
   },
   readOnlyText: {
-    marginTop: 6,
+    marginTop: 8,
     fontSize: 14,
-    color: '#6A655B',
-    lineHeight: 20,
+    lineHeight: 22,
+    color: MEATSHOP_COLORS.muted,
+  },
+  filtersCard: {
+    gap: 2,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5DED1',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1F1C17',
+    ...MEATSHOP_INPUT,
   },
   chipsContainer: {
-    paddingTop: 12,
-    paddingBottom: 2,
+    paddingTop: 14,
+    paddingBottom: 4,
     gap: 8,
   },
   chip: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5DED1',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    ...MEATSHOP_PILL,
   },
   chipActive: {
-    backgroundColor: PRIMARY,
-    borderColor: PRIMARY,
+    backgroundColor: MEATSHOP_COLORS.maroon,
+    borderColor: MEATSHOP_COLORS.maroon,
   },
   chipText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#686250',
+    fontWeight: '700',
+    color: MEATSHOP_COLORS.muted,
   },
   chipTextActive: {
     color: '#FFFFFF',
@@ -805,81 +859,84 @@ const styles = StyleSheet.create({
   catalogMeta: {
     marginTop: 10,
     fontSize: 13,
-    color: '#6A655B',
+    color: MEATSHOP_COLORS.muted,
   },
   loadingState: {
-    marginTop: 12,
+    marginTop: 14,
     flexDirection: 'row',
     alignItems: 'center',
   },
   loadingText: {
     marginLeft: 8,
-    color: '#6A655B',
+    color: MEATSHOP_COLORS.muted,
   },
   errorBanner: {
-    marginTop: 12,
-    backgroundColor: '#FFF1EC',
+    marginTop: 14,
+    backgroundColor: MEATSHOP_COLORS.dangerBg,
     borderWidth: 1,
-    borderColor: '#F2D2C6',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: MEATSHOP_COLORS.dangerBorder,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   errorText: {
-    color: '#A23821',
+    color: MEATSHOP_COLORS.dangerText,
     fontSize: 13,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 6,
-    paddingBottom: 24,
+    lineHeight: 20,
   },
   itemSeparator: {
     height: 12,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    backgroundColor: MEATSHOP_COLORS.surface,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E8E1D4',
-    padding: 14,
-    shadowColor: '#1B120B',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    borderColor: MEATSHOP_COLORS.border,
+    padding: 18,
+    ...MEATSHOP_CARD_SHADOW,
   },
   cardSelected: {
-    borderColor: PRIMARY,
+    borderColor: MEATSHOP_COLORS.maroon,
     shadowOpacity: 0.14,
   },
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 14,
+  },
+  cardIconBubble: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+    backgroundColor: MEATSHOP_COLORS.roseTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardCopy: {
+    flex: 1,
     gap: 8,
   },
   productName: {
-    flex: 1,
-    fontSize: 21,
-    fontWeight: '700',
-    color: '#1E1B15',
+    fontSize: 22,
+    fontWeight: '800',
+    color: MEATSHOP_COLORS.text,
   },
   typeBadge: {
+    alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#F2D2C6',
-    backgroundColor: '#FFF1EC',
+    borderColor: MEATSHOP_COLORS.dangerBorder,
+    backgroundColor: MEATSHOP_COLORS.dangerBg,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   typeBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#A23821',
+    fontWeight: '800',
+    color: MEATSHOP_COLORS.dangerText,
   },
   cardBottomRow: {
-    marginTop: 12,
+    marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -887,18 +944,18 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#666052',
+    fontWeight: '600',
+    color: MEATSHOP_COLORS.muted,
   },
   priceText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: PRIMARY,
+    fontSize: 24,
+    fontWeight: '900',
+    color: MEATSHOP_COLORS.maroon,
   },
   selectedText: {
-    marginTop: 10,
-    color: PRIMARY,
-    fontWeight: '700',
+    marginTop: 12,
+    color: MEATSHOP_COLORS.maroon,
+    fontWeight: '800',
     fontSize: 12,
   },
   emptyState: {
@@ -907,24 +964,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    color: '#726C60',
-  },
-  blockedState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  blockedTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#2A241E',
-    marginBottom: 8,
-  },
-  blockedText: {
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
-    color: '#6C6659',
+    color: MEATSHOP_COLORS.muted,
   },
 });

@@ -1,9 +1,10 @@
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +12,18 @@ import {
   View,
 } from 'react-native';
 
+import {
+  MEATSHOP_CARD_SHADOW,
+  MEATSHOP_COLORS,
+  MEATSHOP_INPUT,
+  MEATSHOP_PILL,
+  MeatshopHeaderIconButton,
+  MeatshopPageHeader,
+  MeatshopPageHero,
+  MeatshopSectionHeader,
+  MeatshopShell,
+  MeatshopSurfaceCard,
+} from '../src/components/ui/MeatshopChrome';
 import { LockedFeatureNotice } from '../src/components/ui/LockedFeatureNotice';
 import { hasPermission } from '../src/features/access/services/accessControl';
 import { useAuthStore } from '../src/features/auth/store/useAuthStore';
@@ -27,16 +40,10 @@ import { useSubscriptionStore } from '../src/features/subscription/store/useSubs
 import { useSyncQueueStore } from '../src/features/sync/store/useSyncQueueStore';
 import { useTenantStore } from '../src/features/tenant/store/useTenantStore';
 
-const PRIMARY = '#7A1F1F';
-const BG = '#F6F6F3';
-const CARD = '#FFFFFF';
-const BORDER = '#E5DED1';
-const TEXT = '#1F1C17';
-const MUTED = '#6A655B';
-
 const PAYMENT_METHODS: SalePaymentMethod[] = ['cash', 'gcash', 'card'];
 
 export default function PosScreen() {
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const tenantId = useTenantStore((state) => state.activeTenantId);
   const products = useProductStore((state) => state.products);
@@ -344,296 +351,346 @@ export default function PosScreen() {
     }
   }
 
-  if (!canCheckout) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.blockedState}>
-          <Text style={styles.blockedTitle}>Access Restricted</Text>
-          <Text style={styles.blockedText}>
-            Your role does not allow POS checkout actions.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!posEntitlement.allowed) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.blockedState}>
-          <LockedFeatureNotice
-            title="POS Locked"
-            message={posEntitlement.message ?? 'Upgrade your plan to use the checkout screen.'}
-            requiredPlan={posEntitlement.requiredPlan}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const blockedBody = !canCheckout ? (
+    <MeatshopSurfaceCard>
+      <Text style={styles.blockedTitle}>Access Restricted</Text>
+      <Text style={styles.blockedText}>Your role does not allow POS checkout actions.</Text>
+    </MeatshopSurfaceCard>
+  ) : !posEntitlement.allowed ? (
+    <MeatshopSurfaceCard>
+      <LockedFeatureNotice
+        title="POS Locked"
+        message={posEntitlement.message ?? 'Upgrade your plan to use the checkout screen.'}
+        requiredPlan={posEntitlement.requiredPlan}
+      />
+    </MeatshopSurfaceCard>
+  ) : null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Weight-Based POS</Text>
-          <Text style={styles.subtitle}>
-            Process meat sales by weight and keep inventory synced automatically.
-          </Text>
-        </View>
+    <MeatshopShell>
+      <MeatshopPageHeader
+        leftAction={{
+          onPress: () => router.back(),
+          children: <Feather name="chevron-left" size={28} color={MEATSHOP_COLORS.maroon} />,
+        }}
+        rightActions={
+          <MeatshopHeaderIconButton
+            icon={<MaterialCommunityIcons name="view-grid-outline" size={26} color={MEATSHOP_COLORS.maroon} />}
+            onPress={() => router.push('/dashboard')}
+          />
+        }
+      />
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Checkout Form</Text>
-
-          <Text style={styles.label}>Select Product</Text>
-          {loadingProducts ? <ActivityIndicator style={{ marginVertical: 8 }} /> : null}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {products.map((product) => {
-              const active = selectedProductId === product.id;
-              return (
-                <Pressable
-                  key={product.id}
-                  onPress={() => setSelectedProductId(product.id)}
-                  style={[styles.chip, active && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                    {product.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <View style={styles.row}>
-            <View style={styles.rowField}>
-              <Text style={styles.label}>Weight (kg)</Text>
-              <TextInput
-                value={weightKg}
-                onChangeText={setWeightKg}
-                style={styles.input}
-                keyboardType="numeric"
-                placeholder="0.00"
-                placeholderTextColor="#8A8A8A"
-              />
-            </View>
-            <View style={styles.rowField}>
-              <Text style={styles.label}>Unit Price</Text>
-              <TextInput
-                value={unitPrice}
-                onChangeText={setUnitPrice}
-                style={styles.input}
-                keyboardType="numeric"
-                placeholder="0.00"
-                placeholderTextColor="#8A8A8A"
-              />
-            </View>
-          </View>
-
-          <Text style={styles.label}>Customer</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            <Pressable
-              onPress={() => setSelectedCustomerId('')}
-              style={[styles.chip, selectedCustomerId === '' && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, selectedCustomerId === '' && styles.chipTextActive]}>
-                Walk-in
-              </Text>
-            </Pressable>
-            {customers.map((customer) => {
-              const active = selectedCustomerId === customer.id;
-              return (
-                <Pressable
-                  key={customer.id}
-                  onPress={() => setSelectedCustomerId(customer.id)}
-                  style={[styles.chip, active && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                    {customer.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <Text style={styles.label}>Payment Method</Text>
-          <View style={styles.paymentRow}>
-            {PAYMENT_METHODS.map((method) => {
-              const active = paymentMethod === method;
-              return (
-                <Pressable
-                  key={method}
-                  onPress={() => setPaymentMethod(method)}
-                  style={[styles.paymentButton, active && styles.paymentButtonActive]}
-                >
-                  <Text style={[styles.paymentButtonText, active && styles.paymentButtonTextActive]}>
-                    {method.toUpperCase()}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Pressable
-            onPress={() => {
-              if (!offlineEntitlement.allowed) {
-                Alert.alert(
-                  'Offline mode locked',
-                  offlineEntitlement.message ?? 'Upgrade your plan to use offline checkout.',
-                );
-                return;
-              }
-              setOfflineMode((current) => !current);
-            }}
-            style={[styles.offlineToggle, offlineMode && styles.offlineToggleActive]}
-          >
-            <Text style={[styles.offlineToggleText, offlineMode && styles.offlineToggleTextActive]}>
-              {offlineMode ? 'Offline mode enabled' : 'Use offline mode for this sale'}
-            </Text>
-          </Pressable>
-
-          {selectedProduct ? (
-            <View style={styles.summaryBox}>
-              <Text style={styles.summaryText}>Product: {selectedProduct.name}</Text>
-              <Text style={styles.summaryText}>Available stock: {Number(selectedProduct.stock ?? 0).toFixed(2)} kg</Text>
-              <Text style={styles.summaryText}>
-                Checkout total:{' '}
-                {(
-                  (Number(weightKg) || 0) * (Number(unitPrice) || Number(selectedProduct.price ?? 0))
-                ).toFixed(2)}
-              </Text>
-            </View>
-          ) : null}
-
-          <View style={styles.actionRow}>
-            <Pressable
-              onPress={() => {
-                void checkout(offlineMode ? 'offline' : 'online');
-              }}
-              disabled={submitting}
-              style={[styles.primaryButton, submitting && styles.disabledButton]}
-            >
-              <Text style={styles.primaryButtonText}>
-                {submitting ? 'Processing...' : offlineMode ? 'Queue Sale' : 'Complete Sale'}
-              </Text>
-            </Pressable>
-            <Pressable onPress={resetForm} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Clear</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Offline Queue</Text>
-            <Pressable
-              onPress={() => {
-                void syncQueuedSales();
-              }}
-              disabled={queuedSales.length === 0 || syncing}
-              style={[
-                styles.smallButton,
-                (queuedSales.length === 0 || syncing) && styles.disabledButton,
-              ]}
-            >
-              <Text style={styles.smallButtonText}>{syncing ? 'Syncing...' : 'Sync Queued Sales'}</Text>
-            </Pressable>
-          </View>
-          <Text style={styles.emptyText}>Queued offline sales: {queuedSales.length}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Recent Sales</Text>
-          {recentSales.length === 0 ? (
-            <Text style={styles.emptyText}>No sales recorded yet.</Text>
-          ) : (
-            recentSales.map((sale) => (
-              <View key={sale.id} style={styles.saleRow}>
-                <View style={styles.saleRowMain}>
-                  <Text style={styles.saleTitle}>{sale.lines[0]?.productName ?? 'Item'}</Text>
-                  <Text style={styles.saleMeta}>
-                    {sale.totalWeightKg.toFixed(2)} kg | {sale.paymentMethod.toUpperCase()} |{' '}
-                    {sale.customerName ?? 'Walk-in'}
-                  </Text>
-                  <Text style={styles.saleMeta}>
-                    {sale.mode === 'offline' ? 'Queued offline' : 'Synced'} |{' '}
-                    {new Date(sale.createdAt).toLocaleString()}
-                  </Text>
-                </View>
-                <Text style={styles.saleAmount}>{sale.subtotal.toFixed(2)}</Text>
+      {blockedBody ? (
+        <View style={styles.blockedWrap}>{blockedBody}</View>
+      ) : (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <MeatshopPageHero
+            eyebrow="Checkout"
+            title="Weight-Based POS"
+            subtitle="Process meat sales by weight, keep inventory synced, and manage offline queueing from the same refined workspace."
+            rightContent={
+              <View style={styles.heroPill}>
+                <Text style={styles.heroPillLabel}>Offline Queue</Text>
+                <Text style={styles.heroPillValue}>{queuedSales.length}</Text>
               </View>
-            ))
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            }
+          >
+            <View style={styles.heroMetaRow}>
+              <View style={styles.heroMetaPill}>
+                <MaterialCommunityIcons name="food-steak" size={16} color={MEATSHOP_COLORS.maroon} />
+                <Text style={styles.heroMetaText}>{products.length} products loaded</Text>
+              </View>
+              <View style={styles.heroMetaPill}>
+                <MaterialCommunityIcons name="account-outline" size={16} color={MEATSHOP_COLORS.gold} />
+                <Text style={styles.heroMetaText}>{customers.length} customers available</Text>
+              </View>
+            </View>
+          </MeatshopPageHero>
+
+          <MeatshopSectionHeader
+            title="Checkout Form"
+            icon={<Feather name="shopping-cart" size={18} color={MEATSHOP_COLORS.maroon} />}
+          />
+
+          <MeatshopSurfaceCard>
+            <Text style={styles.label}>Select Product</Text>
+            {loadingProducts ? <ActivityIndicator style={{ marginVertical: 8 }} color={MEATSHOP_COLORS.maroon} /> : null}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+              {products.map((product) => {
+                const active = selectedProductId === product.id;
+                return (
+                  <Pressable
+                    key={product.id}
+                    onPress={() => setSelectedProductId(product.id)}
+                    style={[styles.chip, active && styles.chipActive]}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{product.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.row}>
+              <View style={styles.rowField}>
+                <Text style={styles.label}>Weight (kg)</Text>
+                <TextInput
+                  value={weightKg}
+                  onChangeText={setWeightKg}
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="0.00"
+                  placeholderTextColor={MEATSHOP_COLORS.soft}
+                />
+              </View>
+              <View style={styles.rowField}>
+                <Text style={styles.label}>Unit Price</Text>
+                <TextInput
+                  value={unitPrice}
+                  onChangeText={setUnitPrice}
+                  style={styles.input}
+                  keyboardType="numeric"
+                  placeholder="0.00"
+                  placeholderTextColor={MEATSHOP_COLORS.soft}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.label}>Customer</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+              <Pressable
+                onPress={() => setSelectedCustomerId('')}
+                style={[styles.chip, selectedCustomerId === '' && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, selectedCustomerId === '' && styles.chipTextActive]}>Walk-in</Text>
+              </Pressable>
+              {customers.map((customer) => {
+                const active = selectedCustomerId === customer.id;
+                return (
+                  <Pressable
+                    key={customer.id}
+                    onPress={() => setSelectedCustomerId(customer.id)}
+                    style={[styles.chip, active && styles.chipActive]}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{customer.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <Text style={styles.label}>Payment Method</Text>
+            <View style={styles.paymentRow}>
+              {PAYMENT_METHODS.map((method) => {
+                const active = paymentMethod === method;
+                return (
+                  <Pressable
+                    key={method}
+                    onPress={() => setPaymentMethod(method)}
+                    style={[styles.paymentButton, active && styles.paymentButtonActive]}
+                  >
+                    <Text style={[styles.paymentButtonText, active && styles.paymentButtonTextActive]}>
+                      {method.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Pressable
+              onPress={() => {
+                if (!offlineEntitlement.allowed) {
+                  Alert.alert(
+                    'Offline mode locked',
+                    offlineEntitlement.message ?? 'Upgrade your plan to use offline checkout.',
+                  );
+                  return;
+                }
+                setOfflineMode((current) => !current);
+              }}
+              style={[styles.offlineToggle, offlineMode && styles.offlineToggleActive]}
+            >
+              <Text style={[styles.offlineToggleText, offlineMode && styles.offlineToggleTextActive]}>
+                {offlineMode ? 'Offline mode enabled' : 'Use offline mode for this sale'}
+              </Text>
+            </Pressable>
+
+            {selectedProduct ? (
+              <View style={styles.summaryBox}>
+                <Text style={styles.summaryText}>Product: {selectedProduct.name}</Text>
+                <Text style={styles.summaryText}>
+                  Available stock: {Number(selectedProduct.stock ?? 0).toFixed(2)} kg
+                </Text>
+                <Text style={styles.summaryText}>
+                  Customer: {selectedCustomer?.name ?? 'Walk-in'}
+                </Text>
+                <Text style={styles.summaryText}>
+                  Checkout total: $
+                  {(
+                    (Number(weightKg) || 0) * (Number(unitPrice) || Number(selectedProduct.price ?? 0))
+                  ).toFixed(2)}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.actionRow}>
+              <Pressable
+                onPress={() => {
+                  void checkout(offlineMode ? 'offline' : 'online');
+                }}
+                disabled={submitting}
+                style={[styles.primaryButton, submitting && styles.disabledButton]}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {submitting ? 'Processing...' : offlineMode ? 'Queue Sale' : 'Complete Sale'}
+                </Text>
+              </Pressable>
+              <Pressable onPress={resetForm} style={styles.secondaryButton}>
+                <Text style={styles.secondaryButtonText}>Clear</Text>
+              </Pressable>
+            </View>
+          </MeatshopSurfaceCard>
+
+          <MeatshopSectionHeader
+            title="Queue & Recent Sales"
+            icon={<Feather name="clock" size={18} color={MEATSHOP_COLORS.maroon} />}
+          />
+
+          <MeatshopSurfaceCard>
+            <View style={styles.queueHeader}>
+              <Text style={styles.cardTitle}>Offline Queue</Text>
+              <Pressable
+                onPress={() => {
+                  void syncQueuedSales();
+                }}
+                disabled={queuedSales.length === 0 || syncing}
+                style={[styles.smallButton, (queuedSales.length === 0 || syncing) && styles.disabledButton]}
+              >
+                <Text style={styles.smallButtonText}>{syncing ? 'Syncing...' : 'Sync Queued Sales'}</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.emptyText}>Queued offline sales: {queuedSales.length}</Text>
+          </MeatshopSurfaceCard>
+
+          <MeatshopSurfaceCard>
+            <Text style={styles.cardTitle}>Recent Sales</Text>
+            {recentSales.length === 0 ? (
+              <Text style={styles.emptyText}>No sales recorded yet.</Text>
+            ) : (
+              recentSales.map((sale) => (
+                <View key={sale.id} style={styles.saleRow}>
+                  <View style={styles.saleRowMain}>
+                    <Text style={styles.saleTitle}>{sale.lines[0]?.productName ?? 'Item'}</Text>
+                    <Text style={styles.saleMeta}>
+                      {sale.totalWeightKg.toFixed(2)} kg | {sale.paymentMethod.toUpperCase()} |{' '}
+                      {sale.customerName ?? 'Walk-in'}
+                    </Text>
+                    <Text style={styles.saleMeta}>
+                      {sale.mode === 'offline' ? 'Queued offline' : 'Synced'} |{' '}
+                      {new Date(sale.createdAt).toLocaleString()}
+                    </Text>
+                  </View>
+                  <Text style={styles.saleAmount}>${sale.subtotal.toFixed(2)}</Text>
+                </View>
+              ))
+            )}
+          </MeatshopSurfaceCard>
+        </ScrollView>
+      )}
+    </MeatshopShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  blockedWrap: {
     flex: 1,
-    backgroundColor: BG,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+  },
+  blockedTitle: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  blockedText: {
+    marginTop: 8,
+    color: MEATSHOP_COLORS.muted,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   content: {
-    padding: 16,
-    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 26,
+    gap: 20,
   },
-  header: {
-    marginBottom: 4,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: TEXT,
-  },
-  subtitle: {
-    marginTop: 4,
-    color: MUTED,
-    fontSize: 14,
-  },
-  card: {
-    backgroundColor: CARD,
-    borderRadius: 14,
+  heroPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
     borderWidth: 1,
-    borderColor: BORDER,
-    padding: 14,
+    borderColor: MEATSHOP_COLORS.border,
+    alignItems: 'center',
+  },
+  heroPillLabel: {
+    color: MEATSHOP_COLORS.soft,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  heroPillValue: {
+    marginTop: 4,
+    color: MEATSHOP_COLORS.maroon,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  heroMetaPill: {
+    ...MEATSHOP_PILL,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  heroMetaText: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 13,
+    fontWeight: '700',
   },
   cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: TEXT,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 6,
+    color: MEATSHOP_COLORS.text,
+    fontSize: 18,
+    fontWeight: '800',
   },
   label: {
-    fontWeight: '700',
-    color: TEXT,
-    marginTop: 10,
-    marginBottom: 6,
+    fontWeight: '800',
+    color: MEATSHOP_COLORS.text,
+    marginTop: 12,
+    marginBottom: 8,
+    fontSize: 14,
   },
   chipRow: {
     gap: 8,
     paddingVertical: 4,
   },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: '#FFFFFF',
+    ...MEATSHOP_PILL,
   },
   chipActive: {
-    backgroundColor: PRIMARY,
-    borderColor: PRIMARY,
+    backgroundColor: MEATSHOP_COLORS.maroon,
+    borderColor: MEATSHOP_COLORS.maroon,
   },
   chipText: {
-    color: TEXT,
-    fontWeight: '600',
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '700',
     fontSize: 12,
   },
   chipTextActive: {
@@ -641,19 +698,13 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   rowField: {
     flex: 1,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    color: TEXT,
+    ...MEATSHOP_INPUT,
   },
   paymentRow: {
     flexDirection: 'row',
@@ -661,147 +712,143 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   paymentButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: '#FFFFFF',
+    ...MEATSHOP_PILL,
+    borderRadius: 16,
+    paddingVertical: 10,
   },
   paymentButtonActive: {
-    backgroundColor: PRIMARY,
-    borderColor: PRIMARY,
+    backgroundColor: MEATSHOP_COLORS.maroon,
+    borderColor: MEATSHOP_COLORS.maroon,
   },
   paymentButtonText: {
-    color: TEXT,
-    fontWeight: '700',
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '800',
     fontSize: 12,
   },
   paymentButtonTextActive: {
     color: '#FFFFFF',
   },
   offlineToggle: {
-    marginTop: 12,
-    borderRadius: 10,
+    marginTop: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    borderColor: MEATSHOP_COLORS.border,
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   offlineToggleActive: {
-    backgroundColor: '#FFF1EC',
-    borderColor: '#F2D2C6',
+    backgroundColor: MEATSHOP_COLORS.dangerBg,
+    borderColor: MEATSHOP_COLORS.dangerBorder,
   },
   offlineToggleText: {
-    color: TEXT,
-    fontWeight: '600',
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '700',
   },
   offlineToggleTextActive: {
-    color: '#A23821',
+    color: MEATSHOP_COLORS.dangerText,
   },
   summaryBox: {
-    marginTop: 12,
-    backgroundColor: '#FAF6F0',
-    borderRadius: 10,
-    padding: 12,
+    marginTop: 14,
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
-    borderColor: BORDER,
-    gap: 4,
+    borderColor: MEATSHOP_COLORS.border,
+    gap: 5,
   },
   summaryText: {
-    color: TEXT,
+    color: MEATSHOP_COLORS.text,
     fontSize: 13,
+    lineHeight: 20,
   },
   actionRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 14,
+    marginTop: 16,
     flexWrap: 'wrap',
   },
   primaryButton: {
-    backgroundColor: PRIMARY,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: MEATSHOP_COLORS.maroonDark,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 14,
   },
   secondaryButton: {
-    backgroundColor: '#FFFFFF',
+    minHeight: 54,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderColor: MEATSHOP_COLORS.border,
   },
   secondaryButtonText: {
-    color: TEXT,
-    fontWeight: '700',
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  queueHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
   },
   smallButton: {
-    backgroundColor: PRIMARY,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    minHeight: 42,
+    borderRadius: 14,
+    backgroundColor: MEATSHOP_COLORS.maroonDark,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
   },
   smallButtonText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 12,
   },
   disabledButton: {
     opacity: 0.55,
   },
   emptyText: {
-    color: MUTED,
+    color: MEATSHOP_COLORS.muted,
     marginTop: 6,
+    lineHeight: 21,
   },
   saleRow: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 12,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: '#FFFFFF',
+    borderColor: MEATSHOP_COLORS.border,
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 12,
   },
   saleRowMain: {
     flex: 1,
   },
   saleTitle: {
-    fontWeight: '700',
-    color: TEXT,
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '800',
+    fontSize: 15,
   },
   saleMeta: {
-    color: MUTED,
+    color: MEATSHOP_COLORS.muted,
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 3,
   },
   saleAmount: {
-    color: PRIMARY,
-    fontWeight: '800',
-  },
-  blockedState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  blockedTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: TEXT,
-    marginBottom: 8,
-  },
-  blockedText: {
-    textAlign: 'center',
-    color: MUTED,
-    lineHeight: 21,
+    color: MEATSHOP_COLORS.maroon,
+    fontWeight: '900',
+    fontSize: 15,
   },
 });

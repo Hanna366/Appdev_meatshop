@@ -1,15 +1,27 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 
+import {
+  MEATSHOP_CARD_SHADOW,
+  MEATSHOP_COLORS,
+  MEATSHOP_INPUT,
+  MEATSHOP_PILL,
+  MeatshopBottomTabBar,
+  MeatshopPageHero,
+  MeatshopSectionHeader,
+  MeatshopShell,
+  MeatshopSurfaceCard,
+} from '../src/components/ui/MeatshopChrome';
 import { LockedFeatureNotice } from '../src/components/ui/LockedFeatureNotice';
 import { hasPermission } from '../src/features/access/services/accessControl';
 import { useAuthStore } from '../src/features/auth/store/useAuthStore';
@@ -34,16 +46,32 @@ import { useSubscriptionStore } from '../src/features/subscription/store/useSubs
 import { useSyncQueueStore } from '../src/features/sync/store/useSyncQueueStore';
 import { useTenantStore } from '../src/features/tenant/store/useTenantStore';
 
-const PRIMARY = '#7A1F1F';
-const BG = '#F6F6F3';
-const CARD = '#FFFFFF';
-const BORDER = '#E5DED1';
-const TEXT = '#1F1C17';
-const MUTED = '#6A655B';
-
 type ExportKind = 'sales' | 'inventory' | 'purchases';
 
+function MetricCard({
+  icon,
+  label,
+  value,
+  bubbleColor,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  bubbleColor: string;
+}) {
+  return (
+    <View style={styles.metricCard}>
+      <View style={[styles.metricBubble, { backgroundColor: bubbleColor }]}>{icon}</View>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.metricValue}>
+        {value}
+      </Text>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </View>
+  );
+}
+
 export default function ReportsScreen() {
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const tenantId = useTenantStore((state) => state.activeTenantId);
   const products = useProductStore((state) => state.products);
@@ -166,246 +194,367 @@ export default function ReportsScreen() {
     setExportPreview(buildPurchasesCsv(scopedPurchases));
   }
 
-  if (!canViewReports) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.blockedState}>
-          <Text style={styles.blockedTitle}>Access Restricted</Text>
-          <Text style={styles.blockedText}>
-            Your role does not allow report viewing.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!reportsEntitlement.allowed) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.blockedState}>
-          <LockedFeatureNotice
-            title="Reports Locked"
-            message={reportsEntitlement.message ?? 'Upgrade your plan to access reports.'}
-            requiredPlan={reportsEntitlement.requiredPlan}
-          />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Reports & Analytics</Text>
-          <Text style={styles.subtitle}>
-            Review sales, inventory, purchase activity, and store performance.
-          </Text>
+    <MeatshopShell>
+      <View style={styles.topBar}>
+        <Text style={styles.topBarTitle}>Reports</Text>
+      </View>
+      <View style={styles.topDivider} />
+
+      {!canViewReports ? (
+        <View style={styles.blockedWrap}>
+          <MeatshopSurfaceCard>
+            <Text style={styles.blockedTitle}>Access Restricted</Text>
+            <Text style={styles.blockedText}>Your role does not allow report viewing.</Text>
+          </MeatshopSurfaceCard>
         </View>
-
-        {loading ? (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator />
-            <Text style={styles.loadingText}>Loading report data...</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.metricsGrid}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>{report.grossSales.toFixed(2)}</Text>
-            <Text style={styles.metricLabel}>Gross Sales</Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>{report.totalOrders}</Text>
-            <Text style={styles.metricLabel}>Total Orders</Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>{report.avgTicket.toFixed(2)}</Text>
-            <Text style={styles.metricLabel}>Average Ticket</Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>{report.totalWeightSold.toFixed(2)} kg</Text>
-            <Text style={styles.metricLabel}>Weight Sold</Text>
-          </View>
+      ) : !reportsEntitlement.allowed ? (
+        <View style={styles.blockedWrap}>
+          <MeatshopSurfaceCard>
+            <LockedFeatureNotice
+              title="Reports Locked"
+              message={reportsEntitlement.message ?? 'Upgrade your plan to access reports.'}
+              requiredPlan={reportsEntitlement.requiredPlan}
+            />
+          </MeatshopSurfaceCard>
         </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Inventory Snapshot</Text>
-          <Text style={styles.lineText}>Low stock items: {report.lowStockCount}</Text>
-          <Text style={styles.lineText}>Out of stock items: {report.outOfStockCount}</Text>
-          <Text style={styles.lineText}>
-            Estimated inventory value: {report.inventoryValueEstimate.toFixed(2)}
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Purchase Summary</Text>
-          <Text style={styles.lineText}>Received purchase orders: {report.receivedPurchases}</Text>
-          <Text style={styles.lineText}>Open purchase orders: {report.openPurchases}</Text>
-          <Text style={styles.lineText}>
-            Offline sales waiting to sync: {queue.filter((item) => item.entity === 'pos_transaction').length}
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Top Selling Products</Text>
-          {report.topSellingProducts.length === 0 ? (
-            <Text style={styles.emptyText}>No sales data yet.</Text>
-          ) : (
-            report.topSellingProducts.map((item) => (
-              <View key={item.productName} style={styles.rankRow}>
-                <View style={styles.rankMain}>
-                  <Text style={styles.rankTitle}>{item.productName}</Text>
-                  <Text style={styles.rankMeta}>{item.weightKg.toFixed(2)} kg sold</Text>
-                </View>
-                <Text style={styles.rankAmount}>{item.revenue.toFixed(2)}</Text>
-              </View>
-            ))
-          )}
-        </View>
-
-        {advancedEntitlement.allowed ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Advanced Analytics</Text>
-            <Text style={styles.lineText}>
-              Revenue per kg: {report.totalWeightSold > 0 ? (report.grossSales / report.totalWeightSold).toFixed(2) : '0.00'}
-            </Text>
-            <Text style={styles.lineText}>
-              Conversion signal: {report.totalOrders > 0 ? 'Sales are being captured through POS.' : 'No completed POS sales yet.'}
-            </Text>
-            <Text style={styles.lineText}>
-              Premium tools unlocked: API, branding, SMS, and batch operations.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Advanced Analytics</Text>
-            <Text style={styles.emptyText}>
-              Upgrade to Premium to unlock deeper analytics, API access, custom branding, and SMS tools.
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>CSV Export Preview</Text>
-          <View style={styles.exportRow}>
-            {(['sales', 'inventory', 'purchases'] as ExportKind[]).map((kind) => {
-              const active = exportKind === kind;
-              return (
-                <Pressable
-                  key={kind}
-                  onPress={() => setExportKind(kind)}
-                  style={[styles.exportChip, active && styles.exportChipActive]}
-                >
-                  <Text style={[styles.exportChipText, active && styles.exportChipTextActive]}>
-                    {kind.toUpperCase()}
+      ) : (
+        <>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <MeatshopPageHero
+              eyebrow="Insights"
+              title="Reports & Analytics"
+              subtitle="Review sales, inventory, purchases, and performance trends in the same visual language as your dashboard."
+              rightContent={
+                <View style={styles.heroPill}>
+                  <Text style={styles.heroPillLabel}>Queued</Text>
+                  <Text style={styles.heroPillValue}>
+                    {queue.filter((item) => item.entity === 'pos_transaction').length}
                   </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                </View>
+              }
+            >
+              <View style={styles.heroMetaRow}>
+                <View style={styles.heroMetaPill}>
+                  <MaterialCommunityIcons name="cash-register" size={16} color={MEATSHOP_COLORS.maroon} />
+                  <Text style={styles.heroMetaText}>{scopedSales.length} sales records</Text>
+                </View>
+                <View style={styles.heroMetaPill}>
+                  <MaterialCommunityIcons name="clipboard-list-outline" size={16} color={MEATSHOP_COLORS.gold} />
+                  <Text style={styles.heroMetaText}>{scopedPurchases.length} purchase orders</Text>
+                </View>
+              </View>
+            </MeatshopPageHero>
 
-          <Pressable
-            onPress={() => buildPreview(exportKind)}
-            style={styles.primaryButton}
-          >
-            <Text style={styles.primaryButtonText}>Generate Preview</Text>
-          </Pressable>
+            {loading ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator color={MEATSHOP_COLORS.maroon} />
+                <Text style={styles.loadingText}>Loading report data...</Text>
+              </View>
+            ) : null}
 
-          <TextInput
-            value={exportPreview}
-            editable={false}
-            multiline
-            style={styles.previewBox}
-            placeholder="Generate a CSV preview here."
-            placeholderTextColor="#8A8A8A"
+            <MeatshopSectionHeader
+              title="Overview"
+              icon={<Feather name="bar-chart-2" size={18} color={MEATSHOP_COLORS.maroon} />}
+            />
+
+            <View style={styles.metricsGrid}>
+              <MetricCard
+                icon={<MaterialCommunityIcons name="cash-multiple" size={28} color={MEATSHOP_COLORS.maroon} />}
+                label="Gross Sales"
+                value={`$${report.grossSales.toFixed(2)}`}
+                bubbleColor={MEATSHOP_COLORS.roseTint}
+              />
+              <MetricCard
+                icon={<MaterialCommunityIcons name="cart-outline" size={28} color={MEATSHOP_COLORS.gold} />}
+                label="Total Orders"
+                value={String(report.totalOrders)}
+                bubbleColor={MEATSHOP_COLORS.sandTint}
+              />
+              <MetricCard
+                icon={<MaterialCommunityIcons name="calculator-variant-outline" size={28} color={MEATSHOP_COLORS.gold} />}
+                label="Average Ticket"
+                value={`$${report.avgTicket.toFixed(2)}`}
+                bubbleColor={MEATSHOP_COLORS.sandTint}
+              />
+              <MetricCard
+                icon={<MaterialCommunityIcons name="weight-kilogram" size={28} color={MEATSHOP_COLORS.maroon} />}
+                label="Weight Sold"
+                value={`${report.totalWeightSold.toFixed(2)} kg`}
+                bubbleColor={MEATSHOP_COLORS.roseTint}
+              />
+            </View>
+
+            <MeatshopSectionHeader
+              title="Business Summary"
+              icon={<Feather name="layers" size={18} color={MEATSHOP_COLORS.maroon} />}
+            />
+
+            <MeatshopSurfaceCard>
+              <Text style={styles.cardTitle}>Inventory Snapshot</Text>
+              <Text style={styles.lineText}>Low stock items: {report.lowStockCount}</Text>
+              <Text style={styles.lineText}>Out of stock items: {report.outOfStockCount}</Text>
+              <Text style={styles.lineText}>
+                Estimated inventory value: ${report.inventoryValueEstimate.toFixed(2)}
+              </Text>
+            </MeatshopSurfaceCard>
+
+            <MeatshopSurfaceCard>
+              <Text style={styles.cardTitle}>Purchase Summary</Text>
+              <Text style={styles.lineText}>Received purchase orders: {report.receivedPurchases}</Text>
+              <Text style={styles.lineText}>Open purchase orders: {report.openPurchases}</Text>
+              <Text style={styles.lineText}>
+                Offline sales waiting to sync: {queue.filter((item) => item.entity === 'pos_transaction').length}
+              </Text>
+            </MeatshopSurfaceCard>
+
+            <MeatshopSurfaceCard>
+              <Text style={styles.cardTitle}>Top Selling Products</Text>
+              {report.topSellingProducts.length === 0 ? (
+                <Text style={styles.emptyText}>No sales data yet.</Text>
+              ) : (
+                report.topSellingProducts.map((item) => (
+                  <View key={item.productName} style={styles.rankRow}>
+                    <View style={styles.rankMain}>
+                      <Text style={styles.rankTitle}>{item.productName}</Text>
+                      <Text style={styles.rankMeta}>{item.weightKg.toFixed(2)} kg sold</Text>
+                    </View>
+                    <Text style={styles.rankAmount}>${item.revenue.toFixed(2)}</Text>
+                  </View>
+                ))
+              )}
+            </MeatshopSurfaceCard>
+
+            <MeatshopSectionHeader
+              title="Advanced Analytics"
+              icon={<Feather name="activity" size={18} color={MEATSHOP_COLORS.maroon} />}
+            />
+
+            <MeatshopSurfaceCard>
+              {advancedEntitlement.allowed ? (
+                <>
+                  <Text style={styles.lineText}>
+                    Revenue per kg:{' '}
+                    {report.totalWeightSold > 0
+                      ? `$${(report.grossSales / report.totalWeightSold).toFixed(2)}`
+                      : '$0.00'}
+                  </Text>
+                  <Text style={styles.lineText}>
+                    Conversion signal:{' '}
+                    {report.totalOrders > 0
+                      ? 'Sales are being captured through POS.'
+                      : 'No completed POS sales yet.'}
+                  </Text>
+                  <Text style={styles.lineText}>
+                    Premium tools unlocked: API, branding, SMS, and batch operations.
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.emptyText}>
+                  Upgrade to Premium to unlock deeper analytics, API access, custom branding, and SMS tools.
+                </Text>
+              )}
+            </MeatshopSurfaceCard>
+
+            <MeatshopSectionHeader
+              title="CSV Export Preview"
+              icon={<Feather name="download" size={18} color={MEATSHOP_COLORS.maroon} />}
+            />
+
+            <MeatshopSurfaceCard>
+              <View style={styles.exportRow}>
+                {(['sales', 'inventory', 'purchases'] as ExportKind[]).map((kind) => {
+                  const active = exportKind === kind;
+                  return (
+                    <Pressable
+                      key={kind}
+                      onPress={() => setExportKind(kind)}
+                      style={[styles.exportChip, active && styles.exportChipActive]}
+                    >
+                      <Text style={[styles.exportChipText, active && styles.exportChipTextActive]}>
+                        {kind.toUpperCase()}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Pressable onPress={() => buildPreview(exportKind)} style={styles.primaryButton}>
+                <Text style={styles.primaryButtonText}>Generate Preview</Text>
+              </Pressable>
+
+              <TextInput
+                value={exportPreview}
+                editable={false}
+                multiline
+                style={styles.previewBox}
+                placeholder="Generate a CSV preview here."
+                placeholderTextColor={MEATSHOP_COLORS.soft}
+              />
+            </MeatshopSurfaceCard>
+          </ScrollView>
+
+          <MeatshopBottomTabBar
+            active="reports"
+            onDashboard={() => router.push('/dashboard')}
+            onPlans={() => router.push('/plans')}
+            onInventory={() => router.push('/inventory')}
+            onReports={() => router.push('/reports')}
           />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </>
+      )}
+    </MeatshopShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  topBar: {
+    minHeight: 66,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarTitle: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  topDivider: {
+    height: 1,
+    backgroundColor: '#E8DDD2',
+  },
+  scrollView: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: 'transparent',
   },
   content: {
-    padding: 16,
-    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 26,
+    gap: 20,
   },
-  header: {
-    marginBottom: 4,
+  blockedWrap: {
+    flex: 1,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
   },
-  title: {
+  blockedTitle: {
+    color: MEATSHOP_COLORS.text,
     fontSize: 24,
-    fontWeight: '700',
-    color: TEXT,
+    fontWeight: '900',
   },
-  subtitle: {
+  blockedText: {
+    marginTop: 8,
+    color: MEATSHOP_COLORS.muted,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  heroPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: MEATSHOP_COLORS.border,
+    alignItems: 'center',
+  },
+  heroPillLabel: {
+    color: MEATSHOP_COLORS.soft,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  heroPillValue: {
     marginTop: 4,
-    color: MUTED,
-    fontSize: 14,
+    color: MEATSHOP_COLORS.maroon,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  heroMetaPill: {
+    ...MEATSHOP_PILL,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  heroMetaText: {
+    color: MEATSHOP_COLORS.text,
+    fontSize: 13,
+    fontWeight: '700',
   },
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingHorizontal: 4,
   },
   loadingText: {
-    color: MUTED,
+    color: MEATSHOP_COLORS.muted,
   },
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 14,
   },
   metricCard: {
-    width: '47%',
-    backgroundColor: CARD,
+    flexBasis: '47%',
+    flexGrow: 1,
+    minHeight: 154,
+    backgroundColor: MEATSHOP_COLORS.surface,
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 14,
-    padding: 14,
+    borderColor: MEATSHOP_COLORS.border,
+    borderRadius: 24,
+    padding: 18,
+    gap: 12,
+    ...MEATSHOP_CARD_SHADOW,
+  },
+  metricBubble: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metricValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: PRIMARY,
+    color: MEATSHOP_COLORS.text,
+    fontSize: 24,
+    fontWeight: '900',
   },
   metricLabel: {
-    marginTop: 4,
-    color: MUTED,
-    fontWeight: '600',
-  },
-  card: {
-    backgroundColor: CARD,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 14,
+    color: MEATSHOP_COLORS.muted,
+    fontSize: 13,
+    fontWeight: '700',
   },
   cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: TEXT,
-    marginBottom: 8,
+    color: MEATSHOP_COLORS.text,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
   },
   lineText: {
-    color: TEXT,
-    fontSize: 13,
-    marginTop: 4,
+    color: MEATSHOP_COLORS.text,
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 6,
   },
   emptyText: {
-    color: MUTED,
+    color: MEATSHOP_COLORS.muted,
+    fontSize: 14,
+    lineHeight: 22,
     marginTop: 4,
   },
   rankRow: {
-    marginTop: 10,
-    paddingTop: 10,
+    marginTop: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: BORDER,
+    borderTopColor: '#EEE1D2',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -415,82 +564,60 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rankTitle: {
-    fontWeight: '700',
-    color: TEXT,
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '800',
+    fontSize: 15,
   },
   rankMeta: {
-    color: MUTED,
+    color: MEATSHOP_COLORS.muted,
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 3,
   },
   rankAmount: {
-    color: PRIMARY,
-    fontWeight: '800',
+    color: MEATSHOP_COLORS.maroon,
+    fontWeight: '900',
+    fontSize: 15,
   },
   exportRow: {
     flexDirection: 'row',
     gap: 8,
     flexWrap: 'wrap',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   exportChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: '#FFFFFF',
+    ...MEATSHOP_PILL,
   },
   exportChipActive: {
-    backgroundColor: PRIMARY,
-    borderColor: PRIMARY,
+    backgroundColor: MEATSHOP_COLORS.maroon,
+    borderColor: MEATSHOP_COLORS.maroon,
   },
   exportChipText: {
-    color: TEXT,
-    fontWeight: '700',
+    color: MEATSHOP_COLORS.text,
+    fontWeight: '800',
     fontSize: 12,
   },
   exportChipTextActive: {
     color: '#FFFFFF',
   },
   primaryButton: {
-    backgroundColor: PRIMARY,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: MEATSHOP_COLORS.maroonDark,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
     alignSelf: 'flex-start',
   },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 14,
   },
   previewBox: {
-    marginTop: 12,
-    minHeight: 180,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    color: TEXT,
+    ...MEATSHOP_INPUT,
+    marginTop: 14,
+    minHeight: 220,
     textAlignVertical: 'top',
-  },
-  blockedState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  blockedTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: TEXT,
-    marginBottom: 8,
-  },
-  blockedText: {
-    textAlign: 'center',
-    color: MUTED,
-    lineHeight: 21,
+    lineHeight: 20,
   },
 });
