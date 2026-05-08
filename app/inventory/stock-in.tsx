@@ -31,7 +31,7 @@ export default function StockInRoute() {
         return;
       }
 
-      const loadedProduct = await fetchProductById(String(productId)).catch(() => null);
+      const loadedProduct = await fetchProductById(String(tenantId), String(productId)).catch(() => null);
       if (!mounted) {
         return;
       }
@@ -43,7 +43,7 @@ export default function StockInRoute() {
     return () => {
       mounted = false;
     };
-  }, [productId]);
+  }, [productId, tenantId]);
 
   async function submit() {
     if (!tenantId) {

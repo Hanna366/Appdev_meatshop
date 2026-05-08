@@ -71,3 +71,4 @@ If you still see "Failed to download remote update" in Expo Go:
 In Expo Go:
 - Open the project from the QR code.
 - Demo login credentials: `demo@meatshop.app` / `password123`.
+- Legacy demo alias also accepted: `2301111318@student.buksu.edu.ph` / `password123`.

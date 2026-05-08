@@ -1,10 +1,82 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Development-only permissive rules for emulator.
-    // WARNING: Do NOT use these in production.
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasUserProfile() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function profileTenantId() {
+      return hasUserProfile() ? userProfile().data.tenantId : null;
+    }
+
+    function claimTenantId() {
+      return signedIn() && request.auth.token.tenantId is string ? request.auth.token.tenantId : null;
+    }
+
+    function isTenantMember(tenantId) {
+      return signedIn() && (claimTenantId() == tenantId || profileTenantId() == tenantId);
+    }
+
+    function newTenantId() {
+      return request.resource.data.tenantId;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && userId == request.auth.uid;
+      allow create: if signedIn()
+        && userId == request.auth.uid
+        && request.resource.data.email == request.auth.token.email;
+      allow update: if signedIn() && userId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /tenants/{tenantId} {
+      allow read: if isTenantMember(tenantId);
+      allow create, update: if isTenantMember(tenantId);
+      allow delete: if false;
+
+      match /products/{productId} {
+        allow read: if isTenantMember(tenantId);
+        allow create, update: if isTenantMember(tenantId) && newTenantId() == tenantId;
+        allow delete: if isTenantMember(tenantId);
+      }
+    }
+
+    match /inventoryBatches/{batchId} {
+      allow read, update, delete: if isTenantMember(resource.data.tenantId);
+      allow create: if isTenantMember(newTenantId());
+    }
+
+    match /inventoryTransactions/{transactionId} {
+      allow read, update, delete: if isTenantMember(resource.data.tenantId);
+      allow create: if isTenantMember(newTenantId());
+    }
+
+    match /businessContacts/{contactId} {
+      allow read, update, delete: if isTenantMember(resource.data.tenantId);
+      allow create: if isTenantMember(newTenantId());
+    }
+
+    match /purchaseOrders/{purchaseOrderId} {
+      allow read, update, delete: if isTenantMember(resource.data.tenantId);
+      allow create: if isTenantMember(newTenantId());
+    }
+
+    match /sales/{saleId} {
+      allow read, update, delete: if isTenantMember(resource.data.tenantId);
+      allow create: if isTenantMember(newTenantId());
+    }
+
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

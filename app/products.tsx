@@ -1,6 +1,6 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -36,6 +36,8 @@ import {
 } from '../src/features/product/services/productService';
 import { useProductStore } from '../src/features/product/store/useProductStore';
 import type { Product, ProductType } from '../src/features/product/types/productTypes';
+import { getFirebaseConfigIssues, hasUsableFirebaseConfig } from '../src/config/firebaseConfig';
+import { getAuthInstance } from '../src/lib/firebase';
 import { evaluateEntitlement } from '../src/features/subscription/services/entitlementService';
 import { guardSubscriptionAccess } from '../src/features/subscription/services/subscriptionGuard';
 import { useSubscriptionStore } from '../src/features/subscription/store/useSubscriptionStore';
@@ -85,6 +87,7 @@ export default function ProductsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
+  const listRef = useRef<FlatList<Product> | null>(null);
 
   const canViewProducts = hasPermission(user?.role, 'products.view');
   const canEditProducts = hasPermission(user?.role, 'products.edit');
@@ -197,6 +200,49 @@ export default function ProductsScreen() {
     setForm(EMPTY_FORM);
   }
 
+  function scrollToEditor() {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    });
+  }
+
+  function selectProductForEditing(productId: string) {
+    setQuery('');
+    setActiveFilter('All');
+    setSelectedId(productId);
+    scrollToEditor();
+  }
+
+  function handleCreateNew() {
+    clearSelection();
+    setQuery('');
+    setActiveFilter('All');
+    scrollToEditor();
+  }
+
+  function handleViewAll() {
+    setQuery('');
+    setActiveFilter('All');
+  }
+
+  function handlePrepareUpdate() {
+    if (!selectedProduct) {
+      Alert.alert('Select an item', 'Tap any item in the catalog to load it into the editor.');
+      return;
+    }
+
+    selectProductForEditing(selectedProduct.id);
+  }
+
+  function handlePrepareDelete() {
+    if (!selectedProduct) {
+      Alert.alert('Select an item', 'Choose an item in the catalog before deleting it.');
+      return;
+    }
+
+    requestDelete(selectedProduct);
+  }
+
   function validateForm(): Omit<Product, 'id'> | null {
     const name = form.name.trim();
     if (!name) {
@@ -225,6 +271,34 @@ export default function ProductsScreen() {
     };
   }
 
+  async function buildProductWriteErrorMessage(error: any) {
+    const baseMessage = error?.message ? String(error.message) : 'Failed to save product';
+    const normalized = `${String(error?.code ?? '')} ${baseMessage}`.toLowerCase();
+
+    if (!normalized.includes('permission-denied') && !normalized.includes('insufficient permissions')) {
+      return baseMessage;
+    }
+
+    if (!hasUsableFirebaseConfig()) {
+      const issues = getFirebaseConfigIssues();
+      const issueList = issues.length > 0 ? issues.join(', ') : 'apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId';
+      return `Firebase is not fully configured on this device. Missing or placeholder values: ${issueList}. Add your real Firebase web app config, then restart the app and sign in again.`;
+    }
+
+    const auth = await getAuthInstance().catch(() => null);
+    const firebaseUid = auth?.currentUser?.uid ?? null;
+
+    if (!firebaseUid) {
+      if (user?.id === 'usr_001') {
+        return 'You are in demo mode only. Demo sessions can open the app, but Firestore blocks product writes. Sign in with a real Firebase account to create products.';
+      }
+
+      return 'No active Firebase sign-in was found for this session. Sign out, sign back in with a real Firebase account, then try creating the product again.';
+    }
+
+    return `Firebase accepted your sign-in, but Firestore rules are blocking product changes for tenant ${activeTenantId ?? 'unknown'}. Check the deployed Firestore rules and this user's tenant access.`;
+  }
+
   async function refreshProducts() {
     if (!activeTenantId) return;
 
@@ -249,6 +323,32 @@ export default function ProductsScreen() {
     } finally {
       setRefreshing(false);
     }
+  }
+
+  async function syncProductsFromDb(options?: {
+    selectedProductId?: string | null;
+    source?: 'default' | 'server';
+  }) {
+    if (!activeTenantId) {
+      return [];
+    }
+
+    const remoteProducts = await fetchProductsByTenant(activeTenantId, {
+      source: options?.source ?? 'default',
+    });
+    setProducts(remoteProducts);
+    patchUsage(activeTenantId, { productsCount: remoteProducts.length });
+
+    if (options && Object.prototype.hasOwnProperty.call(options, 'selectedProductId')) {
+      const selectedProductId = options.selectedProductId ?? null;
+      if (selectedProductId && remoteProducts.some((product) => product.id === selectedProductId)) {
+        selectProductForEditing(selectedProductId);
+      } else if (!selectedProductId) {
+        clearSelection();
+      }
+    }
+
+    return remoteProducts;
   }
 
   async function handleSave() {
@@ -304,23 +404,19 @@ export default function ProductsScreen() {
     setError(null);
     try {
       if (selectedProduct) {
-        await updateProduct(selectedProduct.id, payload);
-        const nextProducts = products.map((product) =>
-          product.id === selectedProduct.id ? { ...product, ...payload } : product,
-        );
-        setProducts(nextProducts);
+        await updateProduct(activeTenantId, selectedProduct.id, payload);
+        await syncProductsFromDb({ selectedProductId: selectedProduct.id });
         Alert.alert('Updated', 'Product changes were saved.');
       } else {
         const productId = await createProduct(activeTenantId, payload);
-        const nextProduct: Product = { id: productId, ...payload };
-        const nextProducts = [nextProduct, ...products];
-        setProducts(nextProducts);
-        patchUsage(activeTenantId, { productsCount: nextProducts.length });
-        setSelectedId(productId);
+        const remoteProducts = await syncProductsFromDb({ selectedProductId: productId });
+        if (!remoteProducts.some((product) => product.id === productId)) {
+          throw new Error('Product was created locally but could not be confirmed from Firestore');
+        }
         Alert.alert('Created', 'New product added to the catalog.');
       }
     } catch (err: any) {
-      const message = err?.message ? String(err.message) : 'Failed to save product';
+      const message = await buildProductWriteErrorMessage(err);
       setError(message);
       Alert.alert('Failed', message);
     } finally {
@@ -329,6 +425,11 @@ export default function ProductsScreen() {
   }
 
   async function performDelete(product: Product) {
+    if (!canEditProducts) {
+      Alert.alert('Read only', 'Your role can view products but cannot delete them.');
+      return;
+    }
+
     if (!activeTenantId) {
       Alert.alert('No tenant selected', 'Please select an active tenant first.');
       return;
@@ -337,14 +438,17 @@ export default function ProductsScreen() {
     setDeleting(true);
     setError(null);
     try {
-      await deleteProduct(product.id);
-      const nextProducts = products.filter((item) => item.id !== product.id);
-      setProducts(nextProducts);
-      patchUsage(activeTenantId, { productsCount: nextProducts.length });
-      clearSelection();
+      await deleteProduct(activeTenantId, product.id);
+      const remoteProducts = await syncProductsFromDb({
+        selectedProductId: null,
+        source: 'server',
+      });
+      if (remoteProducts.some((item) => item.id === product.id)) {
+        throw new Error('Product delete could not be confirmed from Firestore');
+      }
       Alert.alert('Deleted', 'Product removed from the catalog.');
     } catch (err: any) {
-      const message = err?.message ? String(err.message) : 'Failed to delete product';
+      const message = await buildProductWriteErrorMessage(err);
       setError(message);
       Alert.alert('Failed', message);
     } finally {
@@ -352,21 +456,21 @@ export default function ProductsScreen() {
     }
   }
 
-  function requestDelete() {
-    if (!selectedProduct) {
+  function requestDelete(product: Product | null = selectedProduct) {
+    if (!product) {
       return;
     }
 
     Alert.alert(
       'Delete product?',
-      `Remove ${selectedProduct.name} from the catalog? Inventory history may still reference this item.`,
+      `Remove ${product.name} from the catalog? Inventory history may still reference this item.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            void performDelete(selectedProduct);
+            void performDelete(product);
           },
         },
       ],
@@ -391,6 +495,53 @@ export default function ProductsScreen() {
           </View>
         </View>
       </MeatshopPageHero>
+
+      <MeatshopSectionHeader
+        title="CRUD Actions"
+        icon={<Feather name="grid" size={18} color={MEATSHOP_COLORS.maroon} />}
+      />
+
+      <View style={styles.crudGrid}>
+        <Pressable onPress={handleCreateNew} style={styles.crudCard}>
+          <View style={styles.crudIconBubble}>
+            <Feather name="plus-circle" size={20} color={MEATSHOP_COLORS.maroon} />
+          </View>
+          <Text style={styles.crudTitle}>Create</Text>
+          <Text style={styles.crudMeta}>Start a blank form for a new item.</Text>
+        </Pressable>
+
+        <Pressable onPress={handleViewAll} style={styles.crudCard}>
+          <View style={styles.crudIconBubble}>
+            <Feather name="book-open" size={20} color={MEATSHOP_COLORS.maroon} />
+          </View>
+          <Text style={styles.crudTitle}>Read</Text>
+          <Text style={styles.crudMeta}>Clear filters and view the full catalog.</Text>
+        </Pressable>
+
+        <Pressable onPress={handlePrepareUpdate} style={styles.crudCard}>
+          <View style={styles.crudIconBubble}>
+            <Feather name="edit-3" size={20} color={MEATSHOP_COLORS.maroon} />
+          </View>
+          <Text style={styles.crudTitle}>Update</Text>
+          <Text style={styles.crudMeta}>
+            {selectedProduct
+              ? `Editing ${selectedProduct.name} in the form above.`
+              : 'Select an item below to load it into the editor.'}
+          </Text>
+        </Pressable>
+
+        <Pressable onPress={handlePrepareDelete} style={[styles.crudCard, styles.crudCardDanger]}>
+          <View style={[styles.crudIconBubble, styles.crudIconBubbleDanger]}>
+            <Feather name="trash-2" size={20} color={MEATSHOP_COLORS.dangerText} />
+          </View>
+          <Text style={styles.crudTitle}>Delete</Text>
+          <Text style={styles.crudMeta}>
+            {selectedProduct
+              ? `Remove ${selectedProduct.name} from the catalog.`
+              : 'Select an item first to remove it safely.'}
+          </Text>
+        </Pressable>
+      </View>
 
       <MeatshopSectionHeader
         title={canEditProducts ? 'Editor' : 'Catalog Access'}
@@ -502,7 +653,7 @@ export default function ProductsScreen() {
             </Pressable>
 
             <Pressable
-              onPress={requestDelete}
+              onPress={() => requestDelete()}
               disabled={!selectedProduct || saving || deleting}
               style={[
                 styles.deleteButton,
@@ -612,6 +763,7 @@ export default function ProductsScreen() {
         <View style={styles.blockedWrap}>{blockedBody}</View>
       ) : (
         <FlatList
+          ref={listRef}
           style={styles.list}
           data={visibleProducts}
           keyExtractor={(item) => item.id}
@@ -627,7 +779,7 @@ export default function ProductsScreen() {
             const isSelected = selectedId === item.id;
 
             return (
-              <Pressable onPress={() => setSelectedId(item.id)} style={[styles.card, isSelected && styles.cardSelected]}>
+              <Pressable onPress={() => selectProductForEditing(item.id)} style={[styles.card, isSelected && styles.cardSelected]}>
                 <View style={styles.cardTopRow}>
                   <View style={styles.cardIconBubble}>
                     <MaterialCommunityIcons name="food-steak" size={26} color={MEATSHOP_COLORS.maroon} />
@@ -646,6 +798,30 @@ export default function ProductsScreen() {
                   </Text>
                   <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
                 </View>
+
+                {canEditProducts ? (
+                  <View style={styles.cardActionsRow}>
+                    <Pressable
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        selectProductForEditing(item.id);
+                      }}
+                      style={styles.smallActionButton}
+                    >
+                      <Text style={styles.smallActionText}>Edit</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        requestDelete(item);
+                      }}
+                      style={[styles.smallActionButton, styles.smallActionDeleteButton]}
+                    >
+                      <Text style={[styles.smallActionText, styles.smallActionDeleteText]}>Delete</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
 
                 {isSelected ? <Text style={styles.selectedText}>Selected for editing</Text> : null}
               </Pressable>
@@ -706,6 +882,47 @@ const styles = StyleSheet.create({
     color: MEATSHOP_COLORS.text,
     fontSize: 13,
     fontWeight: '700',
+  },
+  crudGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  crudCard: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    backgroundColor: MEATSHOP_COLORS.surface,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: MEATSHOP_COLORS.border,
+    padding: 16,
+    gap: 10,
+    ...MEATSHOP_CARD_SHADOW,
+  },
+  crudCardDanger: {
+    backgroundColor: MEATSHOP_COLORS.dangerBg,
+    borderColor: MEATSHOP_COLORS.dangerBorder,
+  },
+  crudIconBubble: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: MEATSHOP_COLORS.roseTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  crudIconBubbleDanger: {
+    backgroundColor: '#FFFFFF',
+  },
+  crudTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: MEATSHOP_COLORS.text,
+  },
+  crudMeta: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: MEATSHOP_COLORS.muted,
   },
   formCard: {
     gap: 4,
@@ -951,6 +1168,33 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '900',
     color: MEATSHOP_COLORS.maroon,
+  },
+  cardActionsRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  smallActionButton: {
+    minHeight: 38,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    backgroundColor: MEATSHOP_COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: MEATSHOP_COLORS.border,
+  },
+  smallActionDeleteButton: {
+    backgroundColor: MEATSHOP_COLORS.dangerBg,
+    borderColor: MEATSHOP_COLORS.dangerBorder,
+  },
+  smallActionText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: MEATSHOP_COLORS.text,
+  },
+  smallActionDeleteText: {
+    color: MEATSHOP_COLORS.dangerText,
   },
   selectedText: {
     marginTop: 12,

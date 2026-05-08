@@ -1,9 +1,9 @@
 {
-  "apiKey": "YOUR_API_KEY",
-  "authDomain": "YOUR_AUTH_DOMAIN",
+  "apiKey": "AIzaSyDRVPRURFuOpCxR3Qz1sILP7gKcjnEQjFw",
+  "authDomain": "appdev-3d42e.firebaseapp.com",
   "projectId": "appdev-3d42e",
-  "storageBucket": "YOUR_STORAGE_BUCKET",
-  "messagingSenderId": "YOUR_MESSAGING_SENDER_ID",
-  "appId": "YOUR_APP_ID",
-  "measurementId": "YOUR_MEASUREMENT_ID"
+  "storageBucket": "appdev-3d42e.firebasestorage.app",
+  "messagingSenderId": "996903594094",
+  "appId": "1:996903594094:android:4cfbf969bc938ab453de7f",
+  "measurementId": ""
 }

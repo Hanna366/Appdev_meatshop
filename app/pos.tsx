@@ -284,7 +284,7 @@ export default function PosScreen() {
     try {
       const line = sale.lines[0];
       if (mode === 'online') {
-        await createStockOut(tenantId as string, line.productId, line.weightKg, user?.id);
+        await createStockOut(tenantId as string, line.productId, line.weightKg, user?.id, sale.id, sale);
       } else {
         enqueue({
           id: `sync_${sale.id}`,
@@ -331,13 +331,14 @@ export default function PosScreen() {
         const serializedSale = String(item.payload.serializedSale ?? '');
         const sale = JSON.parse(serializedSale) as SaleRecord;
         const line = sale.lines[0];
-        await createStockOut(tenantId, line.productId, line.weightKg, user?.id);
-        upsertSale({
+        const syncedSale = {
           ...sale,
           status: 'completed',
           mode: 'online',
           syncedAt: new Date().toISOString(),
-        });
+        } as SaleRecord;
+        await createStockOut(tenantId, line.productId, line.weightKg, user?.id, sale.id, syncedSale);
+        upsertSale(syncedSale);
         processedIds.push(item.id);
         syncedCount += 1;
       }

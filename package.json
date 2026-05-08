@@ -12,6 +12,7 @@
     "start:tunnel": "node ./scripts/start-with-poly.js start --tunnel",
     "start:lan:clear": "node ./scripts/start-with-poly.js start --host lan --clear",
     "seed:users": "node ./scripts/seedFirestoreUsers.js",
+    "sync:user-profile": "node ./scripts/syncUserProfile.js",
     "seed:emulator:users": "node ./scripts/seedEmulatorUsers.js",
     "seed:products": "node ./scripts/seedProducts.js",
     "seed:emulator:products": "node ./scripts/seedEmulatorProducts.js",

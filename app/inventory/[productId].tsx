@@ -34,7 +34,7 @@ export default function ProductInventoryDetailRoute() {
         const [loadedBatches, loadedTransactions, loadedProduct] = await Promise.all([
           fetchBatchesByProduct(tenantId, String(productId)),
           fetchInventoryTransactions(tenantId, String(productId)),
-          fetchProductById(String(productId)).catch(() => null),
+          fetchProductById(tenantId, String(productId)).catch(() => null),
         ]);
 
         if (!mounted) {

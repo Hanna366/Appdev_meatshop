@@ -172,7 +172,7 @@ export default function LoginScreen() {
             name="email"
             render={({ field: { onChange, onBlur, value } }) => (
               <FormInput
-                label="Email or Username"
+                label="Email"
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}

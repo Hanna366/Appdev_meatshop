@@ -324,7 +324,7 @@ export default function DashboardScreen() {
   const planStatus = activeSubscription?.status?.toUpperCase() ?? 'NOT SET';
   const displayName = user?.name?.trim() || 'User';
   const displayEmail = user?.email?.trim() || 'No email available';
-  const isDemoProfile = user?.id === DEMO_LOCAL_USER_ID;
+  const profileAvatarSource = require('../assets/lor.jpg');
   const reportsHint = reportsEntitlement.allowed
     ? 'Generate and export business reports'
     : reportsEntitlement.message ?? 'Generate and export business reports';
@@ -575,12 +575,12 @@ export default function DashboardScreen() {
             <View style={styles.profileAvatarOuter}>
               <View style={[styles.profileAvatar, isCompactMobile && styles.profileAvatarCompact]}>
                 <Image
-                  source={isDemoProfile ? require('../assets/lor.jpg') : require('../assets/logo.png')}
+                  source={profileAvatarSource}
                   style={[
-                    isDemoProfile ? styles.profileAvatarPhoto : styles.profileAvatarLogo,
-                    isCompactMobile && (isDemoProfile ? styles.profileAvatarPhotoCompact : styles.profileAvatarLogoCompact),
+                    styles.profileAvatarPhoto,
+                    isCompactMobile && styles.profileAvatarPhotoCompact,
                   ]}
-                  resizeMode={isDemoProfile ? 'cover' : 'contain'}
+                  resizeMode="cover"
                 />
               </View>
             </View>

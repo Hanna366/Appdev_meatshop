@@ -13,6 +13,34 @@ export type FirebaseConfig = {
   measurementId?: string;
 };
 
+const REQUIRED_FIREBASE_FIELDS: Array<keyof FirebaseConfig> = [
+  'apiKey',
+  'authDomain',
+  'projectId',
+  'storageBucket',
+  'messagingSenderId',
+  'appId',
+];
+
+function isPlaceholderConfigValue(value?: string): boolean {
+  if (!value) {
+    return true;
+  }
+
+  const normalized = String(value).trim();
+  if (normalized.length === 0) {
+    return true;
+  }
+
+  return (
+    normalized.startsWith('YOUR_') ||
+    normalized.endsWith('_HERE') ||
+    normalized.includes('example') ||
+    normalized === 'appId' ||
+    normalized === 'projectId'
+  );
+}
+
 // Prefer Expo public env vars (EXPO_PUBLIC_FIREBASE_*) when available.
 const env = (global as any).__DEV__ ? process.env : (process.env as any);
 
@@ -31,11 +59,30 @@ const firebaseConfig: FirebaseConfig = {
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
   const devCfg = require('../../dev.firebase.json');
-  if (devCfg && devCfg.apiKey && !String(firebaseConfig.apiKey).startsWith('EXPO')) {
-    Object.assign(firebaseConfig, devCfg);
+  if (devCfg && typeof devCfg === 'object') {
+    const keys = Object.keys(firebaseConfig) as Array<keyof FirebaseConfig>;
+
+    keys.forEach((key) => {
+      const currentValue = firebaseConfig[key];
+      const devValue = devCfg[key];
+
+      if (isPlaceholderConfigValue(String(currentValue ?? '')) && !isPlaceholderConfigValue(String(devValue ?? ''))) {
+        firebaseConfig[key] = devValue;
+      }
+    });
   }
 } catch (e) {
   // ignore if not present
+}
+
+export function hasUsableFirebaseConfig(): boolean {
+  return !isPlaceholderConfigValue(firebaseConfig.apiKey) && !isPlaceholderConfigValue(firebaseConfig.appId);
+}
+
+export function getFirebaseConfigIssues(): string[] {
+  return REQUIRED_FIREBASE_FIELDS.filter((key) => isPlaceholderConfigValue(String(firebaseConfig[key] ?? ''))).map(
+    (key) => String(key),
+  );
 }
 
 export default firebaseConfig;

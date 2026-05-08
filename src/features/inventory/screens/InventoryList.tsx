@@ -329,9 +329,9 @@ export default function InventoryListScreen() {
             </View>
           }
           ListFooterComponent={
-            <Pressable style={styles.addItemButton} onPress={() => router.push('/inventory/stock-in')}>
+            <Pressable style={styles.addItemButton} onPress={() => router.push('/products')}>
               <MaterialCommunityIcons name="plus-circle-outline" size={22} color="#FFFFFF" />
-              <Text style={styles.addItemButtonText}>Add Item</Text>
+              <Text style={styles.addItemButtonText}>Add New Item</Text>
             </Pressable>
           }
         />

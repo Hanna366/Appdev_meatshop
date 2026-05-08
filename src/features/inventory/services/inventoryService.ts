@@ -7,27 +7,73 @@ import type {
   StockAdjustmentInput,
   WasteLogInput,
 } from '../types/inventoryTypes';
+import type { SaleRecord } from '../../sales/types/salesTypes';
 
 // Firestore collection names
 const BATCHES = 'inventoryBatches';
 const TRANSACTIONS = 'inventoryTransactions';
+const SALES = 'sales';
+
+function compareDateLike(left: unknown, right: unknown): number {
+  const toMillis = (value: unknown) => {
+    if (value && typeof value === 'object' && 'toMillis' in value && typeof (value as any).toMillis === 'function') {
+      return (value as any).toMillis();
+    }
+
+    if (value && typeof value === 'object' && 'toDate' in value && typeof (value as any).toDate === 'function') {
+      return (value as any).toDate().getTime();
+    }
+
+    const parsed = new Date(String(value ?? '')).getTime();
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  return toMillis(left) - toMillis(right);
+}
+
+async function fetchOpenBatchDocs(firestore: any, db: any, tenantId: string, productId: string) {
+  try {
+    const q = firestore.query(
+      firestore.collection(db, BATCHES),
+      firestore.where('tenantId', '==', tenantId),
+      firestore.where('productId', '==', productId),
+      firestore.orderBy('receivedAt', 'asc'),
+    );
+    const snap = await firestore.getDocs(q);
+    return snap.docs;
+  } catch (error: any) {
+    const message = String(error?.message ?? error);
+    const code = String(error?.code ?? '');
+    const isMissingIndex = code === 'failed-precondition' || message.includes('requires an index');
+
+    if (!isMissingIndex) {
+      throw error;
+    }
+
+    const fallbackQ = firestore.query(
+      firestore.collection(db, BATCHES),
+      firestore.where('tenantId', '==', tenantId),
+    );
+    const fallbackSnap = await firestore.getDocs(fallbackQ);
+    return fallbackSnap.docs
+      .filter((docSnap: any) => {
+        const data = docSnap.data() as InventoryBatch;
+        return data.productId === productId;
+      })
+      .sort((left: any, right: any) => {
+        const leftData = left.data() as InventoryBatch;
+        const rightData = right.data() as InventoryBatch;
+        return compareDateLike(leftData.receivedAt, rightData.receivedAt);
+      });
+  }
+}
 
 export async function fetchBatchesByProduct(tenantId: string, productId: string) {
   const db = await getDb();
   if (!db) return [];
   const firestore: any = await import('firebase/firestore');
-  // Firestore requires that any field used with an inequality filter
-  // also be the first field in an orderBy. To keep FIFO ordering by
-  // `receivedAt` we avoid using an inequality in the query and filter
-  // `remainingQuantity` client-side instead.
-  const q = firestore.query(
-    firestore.collection(db, BATCHES),
-    firestore.where('tenantId', '==', tenantId),
-    firestore.where('productId', '==', productId),
-    firestore.orderBy('receivedAt', 'asc'),
-  );
-  const snap = await firestore.getDocs(q);
-  return snap.docs
+  const docs = await fetchOpenBatchDocs(firestore, db, tenantId, productId);
+  return docs
     .map((d: any) => ({ id: d.id, ...(d.data() as InventoryBatch) }))
     .filter((b: any) => (b.remainingQuantity || 0) > 0);
 }
@@ -79,7 +125,11 @@ export async function fetchInventoryByTenantWithProducts(tenantId: string): Prom
   if (!db) return summaries;
   const firestore: any = await import('firebase/firestore');
   const productIds = summaries.map((s) => s.productId);
-  const prodDocs = await Promise.all(productIds.map((pid: any) => firestore.getDoc(firestore.doc(db, 'products', pid)).catch(() => null)));
+  const prodDocs = await Promise.all(
+    productIds.map((pid: any) =>
+      firestore.getDoc(firestore.doc(db, 'tenants', tenantId, 'products', pid)).catch(() => null),
+    ),
+  );
   const productMap = new Map<string, any>();
   prodDocs.forEach((d) => {
     if (d && d.exists()) productMap.set(d.id, d.data());
@@ -100,8 +150,7 @@ export async function fetchInventoryFromProducts(tenantId: string): Promise<Prod
   const db = await getDb();
   if (!db) return [];
   const firestore: any = await import('firebase/firestore');
-  const q = firestore.query(firestore.collection(db, 'products'), firestore.where('tenantId', '==', tenantId));
-  const snap = await firestore.getDocs(q);
+  const snap = await firestore.getDocs(firestore.collection(db, 'tenants', tenantId, 'products'));
   return snap.docs.map((d: any) => {
     const pdata: any = d.data();
     const totalQuantity = Number(pdata.stock ?? 0);
@@ -134,7 +183,7 @@ export async function createStockIn(input: StockInInput): Promise<string> {
   const firestore: any = await import('firebase/firestore');
   const batchRef = firestore.doc(firestore.collection(db, BATCHES));
   const txRef = firestore.doc(firestore.collection(db, TRANSACTIONS));
-  const productRef = firestore.doc(db, 'products', input.productId);
+  const productRef = firestore.doc(db, 'tenants', input.tenantId, 'products', input.productId);
 
   await firestore.runTransaction(db, async (tx: any) => {
     // Firestore transactions require every read to happen before any write.
@@ -186,7 +235,14 @@ export async function createStockIn(input: StockInInput): Promise<string> {
 }
 
 // create stock out (consumes batches FIFO). Returns list of transactions created.
-export async function createStockOut(tenantId: string, productId: string, quantity: number, userId?: string) {
+export async function createStockOut(
+  tenantId: string,
+  productId: string,
+  quantity: number,
+  userId?: string,
+  relatedId?: string,
+  sale?: SaleRecord,
+) {
   if (quantity <= 0) throw new Error('quantity must be > 0');
 
   const transactions: string[] = [];
@@ -195,17 +251,11 @@ export async function createStockOut(tenantId: string, productId: string, quanti
   if (!db) throw new Error('Firestore not initialized');
   const firestore: any = await import('firebase/firestore');
   await firestore.runTransaction(db, async (tx: any) => {
-    const productRef = firestore.doc(db, 'products', productId);
+    const productRef = firestore.doc(db, 'tenants', tenantId, 'products', productId);
     const productSnap = await tx.get(productRef as any);
-    const batchesQ = firestore.query(
-      firestore.collection(db, BATCHES),
-      firestore.where('tenantId', '==', tenantId),
-      firestore.where('productId', '==', productId),
-      firestore.orderBy('receivedAt', 'asc'),
-    );
-    const snap = await firestore.getDocs(batchesQ);
+    const batchDocs = await fetchOpenBatchDocs(firestore, db, tenantId, productId);
     let remaining = quantity;
-    for (const docSnap of snap.docs) {
+    for (const docSnap of batchDocs) {
       if (remaining <= 0) break;
       const data = docSnap.data() as InventoryBatch;
       const available = data.remainingQuantity || 0;
@@ -222,7 +272,7 @@ export async function createStockOut(tenantId: string, productId: string, quanti
         type: 'stock_out',
         quantity: -take,
         batchId: docSnap.id,
-        relatedId: null,
+        relatedId: relatedId ?? null,
         reason: 'sale',
         meta: {},
         createdBy: userId ?? null,
@@ -240,6 +290,18 @@ export async function createStockOut(tenantId: string, productId: string, quanti
       const product = productSnap.data() as any;
       const current = Number(product.stock ?? 0);
       tx.update(productRef as any, { stock: Math.max(0, current - quantity) });
+    }
+
+    if (sale) {
+      const saleRef = firestore.doc(db, SALES, sale.id);
+      tx.set(
+        saleRef,
+        {
+          ...sale,
+          updatedAt: firestore.serverTimestamp(),
+        },
+        { merge: true },
+      );
     }
   });
 
@@ -259,7 +321,7 @@ export async function createWasteLog(input: WasteLogInput): Promise<string[]> {
   const firestore: any = await import('firebase/firestore');
   await firestore.runTransaction(db, async (tx: any) => {
     let totalRemoved = 0;
-    const productRef = firestore.doc(db, 'products', productId);
+    const productRef = firestore.doc(db, 'tenants', tenantId, 'products', productId);
     const productSnap = await tx.get(productRef as any);
 
     if (input.batchId) {
@@ -287,14 +349,8 @@ export async function createWasteLog(input: WasteLogInput): Promise<string[]> {
     } else {
       // FIFO depletion similar to stock_out
       let remaining = qty;
-      const batchesQ = firestore.query(
-        firestore.collection(db, BATCHES),
-        firestore.where('tenantId', '==', tenantId),
-        firestore.where('productId', '==', productId),
-        firestore.orderBy('receivedAt', 'asc'),
-      );
-      const snap = await firestore.getDocs(batchesQ);
-      for (const docSnap of snap.docs) {
+      const batchDocs = await fetchOpenBatchDocs(firestore, db, tenantId, productId);
+      for (const docSnap of batchDocs) {
         if (remaining <= 0) break;
         const data = docSnap.data() as InventoryBatch;
         const available = data.remainingQuantity || 0;
@@ -373,7 +429,7 @@ export async function adjustStock(input: StockAdjustmentInput): Promise<string> 
       createdAt: firestore.serverTimestamp(),
     } as any);
 
-    const productRef = firestore.doc(db, 'products', input.productId);
+    const productRef = firestore.doc(db, 'tenants', input.tenantId, 'products', input.productId);
     const productSnap = await firestore.getDoc(productRef);
     if (productSnap.exists()) {
       const product = productSnap.data() as any;
