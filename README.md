@@ -10,6 +10,14 @@ A production-ready React Native starter using Expo Go with a modular, feature-ba
 - Zustand (persisted via AsyncStorage)
 - React Hook Form + Zod
 
+## Team
+
+- Ares - Main Programmer
+- Carson - Programmer
+- Bauyan - UI
+- Arbutante - UI
+- Gaviola - UI
+
 ## Project Structure
 
 ```text
@@ -71,4 +79,3 @@ If you still see "Failed to download remote update" in Expo Go:
 In Expo Go:
 - Open the project from the QR code.
 - Demo login credentials: `demo@meatshop.app` / `password123`.
-- Legacy demo alias also accepted: `2301111318@student.buksu.edu.ph` / `password123`.
