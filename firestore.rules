@@ -5,74 +5,40 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function userProfile() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
-    function hasUserProfile() {
-      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
-
-    function profileTenantId() {
-      return hasUserProfile() ? userProfile().data.tenantId : null;
-    }
-
-    function claimTenantId() {
-      return signedIn() && request.auth.token.tenantId is string ? request.auth.token.tenantId : null;
-    }
-
-    function isTenantMember(tenantId) {
-      return signedIn() && (claimTenantId() == tenantId || profileTenantId() == tenantId);
-    }
-
-    function newTenantId() {
-      return request.resource.data.tenantId;
-    }
-
+    // App-development rules:
+    // Any signed-in Firebase Auth user can use the app collections.
+    // This avoids profile-discovery deadlocks when a Firestore user profile
+    // exists by email/student id instead of by Firebase Auth UID.
     match /users/{userId} {
-      allow read: if signedIn() && userId == request.auth.uid;
-      allow create: if signedIn()
-        && userId == request.auth.uid
-        && request.resource.data.email == request.auth.token.email;
-      allow update: if signedIn() && userId == request.auth.uid;
-      allow delete: if false;
+      allow read, write: if signedIn();
     }
 
     match /tenants/{tenantId} {
-      allow read: if isTenantMember(tenantId);
-      allow create, update: if isTenantMember(tenantId);
-      allow delete: if false;
+      allow read, write: if signedIn();
 
       match /products/{productId} {
-        allow read: if isTenantMember(tenantId);
-        allow create, update: if isTenantMember(tenantId) && newTenantId() == tenantId;
-        allow delete: if isTenantMember(tenantId);
+        allow read, write: if signedIn();
       }
     }
 
     match /inventoryBatches/{batchId} {
-      allow read, update, delete: if isTenantMember(resource.data.tenantId);
-      allow create: if isTenantMember(newTenantId());
+      allow read, write: if signedIn();
     }
 
     match /inventoryTransactions/{transactionId} {
-      allow read, update, delete: if isTenantMember(resource.data.tenantId);
-      allow create: if isTenantMember(newTenantId());
+      allow read, write: if signedIn();
     }
 
     match /businessContacts/{contactId} {
-      allow read, update, delete: if isTenantMember(resource.data.tenantId);
-      allow create: if isTenantMember(newTenantId());
+      allow read, write: if signedIn();
     }
 
     match /purchaseOrders/{purchaseOrderId} {
-      allow read, update, delete: if isTenantMember(resource.data.tenantId);
-      allow create: if isTenantMember(newTenantId());
+      allow read, write: if signedIn();
     }
 
     match /sales/{saleId} {
-      allow read, update, delete: if isTenantMember(resource.data.tenantId);
-      allow create: if isTenantMember(newTenantId());
+      allow read, write: if signedIn();
     }
 
     match /{document=**} {

@@ -3,6 +3,18 @@ import type { SaleRecord } from '../types/salesTypes';
 
 const SALES = 'sales';
 
+export function toFirestoreSaleRecord(sale: SaleRecord) {
+  return {
+    ...sale,
+    customerId: sale.customerId ?? null,
+    customerName: sale.customerName ?? null,
+    syncedAt: sale.syncedAt ?? null,
+    lines: sale.lines.map((line) => ({
+      ...line,
+    })),
+  };
+}
+
 export async function saveSaleRecord(sale: SaleRecord): Promise<void> {
   const db = await getDb();
   if (!db) {
@@ -14,7 +26,7 @@ export async function saveSaleRecord(sale: SaleRecord): Promise<void> {
   await firestore.setDoc(
     ref,
     {
-      ...sale,
+      ...toFirestoreSaleRecord(sale),
       updatedAt: firestore.serverTimestamp(),
     },
     { merge: true },

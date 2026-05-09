@@ -34,6 +34,35 @@ function mapContact(docSnap: any): BusinessContact {
   };
 }
 
+function toFirestoreContact(contact: Partial<BusinessContact>) {
+  return {
+    tenantId: contact.tenantId ?? '',
+    kind: contact.kind ?? 'supplier',
+    name: contact.name ?? '',
+    phone: contact.phone ?? '',
+    email: contact.email ?? '',
+    notes: contact.notes ?? '',
+    createdAt: contact.createdAt ?? new Date().toISOString(),
+    updatedAt: contact.updatedAt ?? new Date().toISOString(),
+  };
+}
+
+function toFirestoreContactUpdate(contact: Partial<BusinessContact>) {
+  const data: Record<string, unknown> = {
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (contact.tenantId !== undefined) data.tenantId = contact.tenantId;
+  if (contact.kind !== undefined) data.kind = contact.kind;
+  if (contact.name !== undefined) data.name = contact.name;
+  if (contact.phone !== undefined) data.phone = contact.phone;
+  if (contact.email !== undefined) data.email = contact.email ?? '';
+  if (contact.notes !== undefined) data.notes = contact.notes ?? '';
+  if (contact.createdAt !== undefined) data.createdAt = contact.createdAt;
+
+  return data;
+}
+
 export async function fetchContactsByTenant(tenantId: string): Promise<BusinessContact[]> {
   const db = await getDb();
   if (!db) {
@@ -57,16 +86,7 @@ export async function createBusinessContact(contact: BusinessContact): Promise<s
 
   const firestore: any = await import('firebase/firestore');
   const ref = firestore.doc(db, CONTACTS, contact.id);
-  await firestore.setDoc(ref, {
-    tenantId: contact.tenantId,
-    kind: contact.kind,
-    name: contact.name,
-    phone: contact.phone,
-    email: contact.email ?? '',
-    notes: contact.notes ?? '',
-    createdAt: contact.createdAt,
-    updatedAt: contact.updatedAt ?? contact.createdAt,
-  });
+  await firestore.setDoc(ref, toFirestoreContact(contact));
   return ref.id;
 }
 
@@ -83,10 +103,10 @@ export async function updateBusinessContact(
   const ref = firestore.doc(db, CONTACTS, contactId);
   await firestore.setDoc(
     ref,
-    {
+    toFirestoreContactUpdate({
       ...updates,
       updatedAt: new Date().toISOString(),
-    },
+    }),
     { merge: true },
   );
 }

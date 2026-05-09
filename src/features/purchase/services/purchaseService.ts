@@ -39,6 +39,45 @@ function mapPurchaseOrder(docSnap: any): PurchaseOrder {
   };
 }
 
+function toFirestorePurchaseOrder(purchase: Partial<PurchaseOrder>) {
+  return {
+    tenantId: purchase.tenantId ?? '',
+    supplierId: purchase.supplierId ?? null,
+    supplierName: purchase.supplierName ?? '',
+    productId: purchase.productId ?? '',
+    productName: purchase.productName ?? '',
+    quantity: Number(purchase.quantity ?? 0),
+    cost: Number(purchase.cost ?? 0),
+    expiryDate: purchase.expiryDate ?? null,
+    notes: purchase.notes ?? '',
+    status: purchase.status ?? 'ordered',
+    createdAt: purchase.createdAt ?? new Date().toISOString(),
+    receivedAt: purchase.receivedAt ?? null,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function toFirestorePurchaseOrderUpdate(purchase: Partial<PurchaseOrder>) {
+  const data: Record<string, unknown> = {
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (purchase.tenantId !== undefined) data.tenantId = purchase.tenantId;
+  if (purchase.supplierId !== undefined) data.supplierId = purchase.supplierId ?? null;
+  if (purchase.supplierName !== undefined) data.supplierName = purchase.supplierName;
+  if (purchase.productId !== undefined) data.productId = purchase.productId;
+  if (purchase.productName !== undefined) data.productName = purchase.productName;
+  if (purchase.quantity !== undefined) data.quantity = Number(purchase.quantity);
+  if (purchase.cost !== undefined) data.cost = Number(purchase.cost);
+  if (purchase.expiryDate !== undefined) data.expiryDate = purchase.expiryDate ?? null;
+  if (purchase.notes !== undefined) data.notes = purchase.notes ?? '';
+  if (purchase.status !== undefined) data.status = purchase.status;
+  if (purchase.createdAt !== undefined) data.createdAt = purchase.createdAt;
+  if (purchase.receivedAt !== undefined) data.receivedAt = purchase.receivedAt ?? null;
+
+  return data;
+}
+
 export async function fetchPurchaseOrdersByTenant(tenantId: string): Promise<PurchaseOrder[]> {
   const db = await getDb();
   if (!db) {
@@ -62,21 +101,7 @@ export async function createPurchaseOrder(purchase: PurchaseOrder): Promise<stri
 
   const firestore: any = await import('firebase/firestore');
   const ref = firestore.doc(db, PURCHASE_ORDERS, purchase.id);
-  await firestore.setDoc(ref, {
-    tenantId: purchase.tenantId,
-    supplierId: purchase.supplierId ?? null,
-    supplierName: purchase.supplierName,
-    productId: purchase.productId,
-    productName: purchase.productName,
-    quantity: purchase.quantity,
-    cost: purchase.cost,
-    expiryDate: purchase.expiryDate ?? null,
-    notes: purchase.notes ?? '',
-    status: purchase.status,
-    createdAt: purchase.createdAt,
-    receivedAt: purchase.receivedAt ?? null,
-    updatedAt: new Date().toISOString(),
-  });
+  await firestore.setDoc(ref, toFirestorePurchaseOrder(purchase));
   return ref.id;
 }
 
@@ -93,10 +118,7 @@ export async function updatePurchaseOrder(
   const ref = firestore.doc(db, PURCHASE_ORDERS, purchaseId);
   await firestore.setDoc(
     ref,
-    {
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    },
+    toFirestorePurchaseOrderUpdate(updates),
     { merge: true },
   );
 }

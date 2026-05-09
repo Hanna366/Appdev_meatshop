@@ -13,6 +13,7 @@
     "start:lan:clear": "node ./scripts/start-with-poly.js start --host lan --clear",
     "seed:users": "node ./scripts/seedFirestoreUsers.js",
     "sync:user-profile": "node ./scripts/syncUserProfile.js",
+    "deploy:firestore": "npx firebase-tools deploy --project appdev-3d42e --only \"firestore:rules,firestore:indexes\"",
     "seed:emulator:users": "node ./scripts/seedEmulatorUsers.js",
     "seed:products": "node ./scripts/seedProducts.js",
     "seed:emulator:products": "node ./scripts/seedEmulatorProducts.js",

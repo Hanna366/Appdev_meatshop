@@ -1,4 +1,5 @@
 import type { User } from '../types/authTypes';
+import { getAuthInstance } from '../../../lib/firebase';
 
 /**
  * Lightweight Firebase Auth wrapper using modular SDK.
@@ -15,22 +16,26 @@ function mapFirebaseUser(fbUser: any): User {
 }
 
 export async function signIn(email: string, password: string): Promise<User> {
-  const { getAuth, signInWithEmailAndPassword } = await import('firebase/auth');
-  const auth = getAuth();
+  const { signInWithEmailAndPassword } = await import('firebase/auth');
+  const auth = await getAuthInstance();
+  if (!auth) throw new Error('Auth not initialized');
   const cred = await signInWithEmailAndPassword(auth, email, password);
   return mapFirebaseUser(cred.user);
 }
 
 export async function signOut(): Promise<void> {
-  const { getAuth, signOut: fbSignOut } = await import('firebase/auth');
-  await fbSignOut(getAuth());
+  const { signOut: fbSignOut } = await import('firebase/auth');
+  const auth = await getAuthInstance();
+  if (!auth) return;
+  await fbSignOut(auth);
 }
 
 export async function signUp(email: string, password: string): Promise<User> {
-  const { getAuth, createUserWithEmailAndPassword, sendEmailVerification } = await import(
+  const { createUserWithEmailAndPassword, sendEmailVerification } = await import(
     'firebase/auth',
   );
-  const auth = getAuth();
+  const auth = await getAuthInstance();
+  if (!auth) throw new Error('Auth not initialized');
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   try {
     await sendEmailVerification(cred.user);
@@ -41,15 +46,23 @@ export async function signUp(email: string, password: string): Promise<User> {
 }
 
 export async function sendResetEmail(email: string): Promise<void> {
-  const { getAuth, sendPasswordResetEmail } = await import('firebase/auth');
-  await sendPasswordResetEmail(getAuth(), email);
+  const { sendPasswordResetEmail } = await import('firebase/auth');
+  const auth = await getAuthInstance();
+  if (!auth) throw new Error('Auth not initialized');
+  await sendPasswordResetEmail(auth, email);
 }
 
 export function watchAuthState(cb: (user: User | null) => void) {
   let unsub: (() => void) | null = null;
   import('firebase/auth')
-    .then(({ getAuth, onAuthStateChanged }) => {
-      unsub = onAuthStateChanged(getAuth(), (fbUser) => {
+    .then(async ({ onAuthStateChanged }) => {
+      const auth = await getAuthInstance();
+      if (!auth) {
+        cb(null);
+        return;
+      }
+
+      unsub = onAuthStateChanged(auth, (fbUser) => {
         if (fbUser) cb(mapFirebaseUser(fbUser));
         else cb(null);
       });

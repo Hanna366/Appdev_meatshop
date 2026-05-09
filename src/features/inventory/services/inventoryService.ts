@@ -8,6 +8,7 @@ import type {
   WasteLogInput,
 } from '../types/inventoryTypes';
 import type { SaleRecord } from '../../sales/types/salesTypes';
+import { toFirestoreSaleRecord } from '../../sales/services/salesService';
 
 // Firestore collection names
 const BATCHES = 'inventoryBatches';
@@ -253,6 +254,8 @@ export async function createStockOut(
   await firestore.runTransaction(db, async (tx: any) => {
     const productRef = firestore.doc(db, 'tenants', tenantId, 'products', productId);
     const productSnap = await tx.get(productRef as any);
+    const product = productSnap.exists() ? (productSnap.data() as any) : null;
+    const currentProductStock = Number(product?.stock ?? 0);
     const batchDocs = await fetchOpenBatchDocs(firestore, db, tenantId, productId);
     let remaining = quantity;
     for (const docSnap of batchDocs) {
@@ -282,14 +285,34 @@ export async function createStockOut(
       remaining -= take;
     }
 
+    if (remaining > 0 && (!productSnap.exists() || currentProductStock < quantity)) {
+      throw new Error(
+        `Insufficient stock to fulfill stock out. Available stock is ${currentProductStock.toFixed(2)} kg.`,
+      );
+    }
+
     if (remaining > 0) {
-      throw new Error('Insufficient stock to fulfill stock out');
+      const tRef = firestore.doc(firestore.collection(db, TRANSACTIONS));
+      tx.set(tRef, {
+        tenantId,
+        productId,
+        type: 'stock_out',
+        quantity: -remaining,
+        batchId: null,
+        relatedId: relatedId ?? null,
+        reason: 'sale',
+        meta: {
+          source: 'product_stock_fallback',
+          note: 'No matching inventory batch had enough remaining quantity.',
+        },
+        createdBy: userId ?? null,
+        createdAt: firestore.serverTimestamp(),
+      } as any);
+      transactions.push(tRef.id);
     }
 
     if (productSnap.exists()) {
-      const product = productSnap.data() as any;
-      const current = Number(product.stock ?? 0);
-      tx.update(productRef as any, { stock: Math.max(0, current - quantity) });
+      tx.update(productRef as any, { stock: Math.max(0, currentProductStock - quantity) });
     }
 
     if (sale) {
@@ -297,7 +320,7 @@ export async function createStockOut(
       tx.set(
         saleRef,
         {
-          ...sale,
+          ...toFirestoreSaleRecord(sale),
           updatedAt: firestore.serverTimestamp(),
         },
         { merge: true },

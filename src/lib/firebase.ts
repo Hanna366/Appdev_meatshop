@@ -1,4 +1,5 @@
 import firebaseConfig from '../config/firebaseConfig';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 let _app: any = null;
 let _auth: any = null;
@@ -27,10 +28,12 @@ async function ensureApp(): Promise<any | null> {
           // connect auth and firestore emulators if available
           try {
             const authMod = await import('firebase/auth');
-            const { connectAuthEmulator, getAuth } = authMod as any;
-            const auth = getAuth(_app);
+            const { connectAuthEmulator } = authMod as any;
+            const auth = await getAuthInstance();
             // default emulator host/port used by Emulator Suite
-            connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+            if (auth) {
+              connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+            }
           } catch (e) {
             // ignore if auth emulator or methods aren't available
           }
@@ -61,8 +64,20 @@ export async function getAuthInstance(): Promise<any | null> {
   if (!app) return null;
   try {
     const authMod = await import('firebase/auth');
-    const { getAuth } = authMod as any;
-    _auth = getAuth(app);
+    const { getAuth, getReactNativePersistence, initializeAuth } = authMod as any;
+
+    try {
+      if (initializeAuth && getReactNativePersistence) {
+        _auth = initializeAuth(app, {
+          persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+        });
+      } else {
+        _auth = getAuth(app);
+      }
+    } catch (error: any) {
+      _auth = getAuth(app);
+    }
+
     return _auth;
   } catch (err) {
     console.warn('Failed to get firebase auth:', err);

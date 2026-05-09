@@ -1,0 +1,138 @@
+[debug] [2026-05-08T14:42:34.933Z] ----------------------------------------------------------------------
+[debug] [2026-05-08T14:42:34.936Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\OWNER\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only firestore:rules,firestore:indexes
+[debug] [2026-05-08T14:42:34.936Z] CLI Version:   15.17.0
+[debug] [2026-05-08T14:42:34.936Z] Platform:      win32
+[debug] [2026-05-08T14:42:34.936Z] Node Version:  v20.19.4
+[debug] [2026-05-08T14:42:34.936Z] Time:          Fri May 08 2026 22:42:34 GMT+0800 (Philippine Standard Time)
+[debug] [2026-05-08T14:42:34.936Z] ----------------------------------------------------------------------
+[debug] 
+[error] 
+[error] Error: No currently active project.
+To run this command, you need to specify a project. You have two options:
+- Run this command with --project <alias_or_project_id>.
+- Set an active project by running firebase use --add, then rerun this command.
+To list all the Firebase projects to which you have access, run firebase projects:list.
+To learn about active projects for the CLI, visit https://firebase.google.com/docs/cli#project_aliases
+
+
+[debug] [2026-05-08T14:42:53.187Z] ----------------------------------------------------------------------
+[debug] [2026-05-08T14:42:53.189Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\OWNER\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --project appdev-3d42e --only firestore:rules,firestore:indexes
+[debug] [2026-05-08T14:42:53.189Z] CLI Version:   15.17.0
+[debug] [2026-05-08T14:42:53.190Z] Platform:      win32
+[debug] [2026-05-08T14:42:53.190Z] Node Version:  v20.19.4
+[debug] [2026-05-08T14:42:53.190Z] Time:          Fri May 08 2026 22:42:53 GMT+0800 (Philippine Standard Time)
+[debug] [2026-05-08T14:42:53.190Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-05-08T14:42:54.618Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-08T14:42:54.619Z] > authorizing via signed-in user (2301111318@student.buksu.edu.ph)
+[debug] [2026-05-08T14:42:54.619Z] [iam] checking project appdev-3d42e for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-05-08T14:42:54.620Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:42:54.620Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:42:54.622Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/appdev-3d42e:testIamPermissions [none]
+[debug] [2026-05-08T14:42:54.622Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/appdev-3d42e:testIamPermissions  x-goog-user-project=appdev-3d42e
+[debug] [2026-05-08T14:42:54.622Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/appdev-3d42e:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-05-08T14:42:55.724Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/appdev-3d42e:testIamPermissions 200
+[debug] [2026-05-08T14:42:55.724Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/appdev-3d42e:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'appdev-3d42e'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-05-08T14:42:55.732Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:42:55.732Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:42:55.732Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/appdev-3d42e/services/firestore.googleapis.com [none]
+[debug] [2026-05-08T14:42:55.732Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/appdev-3d42e/services/firestore.googleapis.com  x-goog-user-project=appdev-3d42e
+[debug] [2026-05-08T14:42:57.260Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/appdev-3d42e/services/firestore.googleapis.com 200
+[debug] [2026-05-08T14:42:57.260Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/appdev-3d42e/services/firestore.googleapis.com [omitted]
+[info] +  firestore: required API firestore.googleapis.com is enabled 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-05-08T14:42:57.275Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:42:57.275Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:42:57.275Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default) [none]
+[debug] [2026-05-08T14:42:58.607Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default) 200
+[debug] [2026-05-08T14:42:58.607Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default) {"name":"projects/appdev-3d42e/databases/(default)","uid":"72df2f78-492f-4db3-aea0-9d7d4a65ae40","createTime":"2026-04-17T06:52:46.856524Z","updateTime":"2026-04-17T06:52:46.856524Z","locationId":"nam5","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-05-08T13:42:58.473937Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"s","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IOHy8M32qZQDMMrv8Y2t9JMD"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-05-08T14:42:58.617Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:42:58.617Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:42:58.618Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/appdev-3d42e:test [none]
+[debug] [2026-05-08T14:42:58.618Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/appdev-3d42e:test [omitted]
+[debug] [2026-05-08T14:43:00.189Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/appdev-3d42e:test 200
+[debug] [2026-05-08T14:43:00.189Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/appdev-3d42e:test {}
+[info] +  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2026-05-08T14:43:00.191Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:00.191Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:00.193Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/releases pageSize=10&pageToken=
+[debug] [2026-05-08T14:43:19.295Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/releases 200
+[debug] [2026-05-08T14:43:19.296Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/releases {"releases":[{"name":"projects/appdev-3d42e/releases/cloud.firestore","rulesetName":"projects/appdev-3d42e/rulesets/79afa818-d1b7-420a-858b-61751ab43ce5","createTime":"2026-04-17T06:52:49.986760Z","updateTime":"2026-05-06T13:53:35.541276Z"}]}
+[debug] [2026-05-08T14:43:19.297Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:19.297Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:19.298Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/rulesets/79afa818-d1b7-420a-858b-61751ab43ce5 [none]
+[debug] [2026-05-08T14:43:19.688Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/rulesets/79afa818-d1b7-420a-858b-61751ab43ce5 200
+[debug] [2026-05-08T14:43:19.689Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/rulesets/79afa818-d1b7-420a-858b-61751ab43ce5 [omitted]
+[info] i  firestore: uploading rules firestore.rules... 
+[debug] [2026-05-08T14:43:19.692Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:19.692Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:19.692Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/rulesets [none]
+[debug] [2026-05-08T14:43:19.693Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/rulesets [omitted]
+[debug] [2026-05-08T14:43:21.133Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/rulesets 200
+[debug] [2026-05-08T14:43:21.134Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/rulesets {"name":"projects/appdev-3d42e/rulesets/9bd6d542-570a-4808-a170-657661a13068","source":{"files":[{"content":"rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    function signedIn() {\n      return request.auth != null;\n    }\n\n    // App-development rules:\n    // Any signed-in Firebase Auth user can use the app collections.\n    // This avoids profile-discovery deadlocks when a Firestore user profile\n    // exists by email/student id instead of by Firebase Auth UID.\n    match /users/{userId} {\n      allow read, write: if signedIn();\n    }\n\n    match /tenants/{tenantId} {\n      allow read, write: if signedIn();\n\n      match /products/{productId} {\n        allow read, write: if signedIn();\n      }\n    }\n\n    match /inventoryBatches/{batchId} {\n      allow read, write: if signedIn();\n    }\n\n    match /inventoryTransactions/{transactionId} {\n      allow read, write: if signedIn();\n    }\n\n    match /businessContacts/{contactId} {\n      allow read, write: if signedIn();\n    }\n\n    match /purchaseOrders/{purchaseOrderId} {\n      allow read, write: if signedIn();\n    }\n\n    match /sales/{saleId} {\n      allow read, write: if signedIn();\n    }\n\n    match /{document=**} {\n      allow read, write: if false;\n    }\n  }\n}\n","name":"firestore.rules"}]},"createTime":"2026-05-08T14:43:20.959503Z","metadata":{"services":["cloud.firestore"]}}
+[debug] [2026-05-08T14:43:21.134Z] [rules] created ruleset projects/appdev-3d42e/rulesets/9bd6d542-570a-4808-a170-657661a13068
+[info] i  firestore: deploying indexes... 
+[debug] [2026-05-08T14:43:21.138Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:21.139Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:21.139Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/-/indexes [none]
+[debug] [2026-05-08T14:43:22.405Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/-/indexes 200
+[debug] [2026-05-08T14:43:22.406Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/-/indexes {}
+[debug] [2026-05-08T14:43:22.406Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:22.406Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:22.407Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* [none]
+[debug] [2026-05-08T14:43:22.688Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* 200
+[debug] [2026-05-08T14:43:22.688Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* {"fields":[{"name":"projects/appdev-3d42e/databases/(default)/collectionGroups/__default__/fields/*","indexConfig":{"indexes":[{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"ASCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"DESCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","arrayConfig":"CONTAINS"}],"state":"READY"}]}}]}
+[debug] [2026-05-08T14:43:22.689Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:22.689Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:22.689Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default) [none]
+[debug] [2026-05-08T14:43:22.969Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default) 200
+[debug] [2026-05-08T14:43:22.969Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default) {"name":"projects/appdev-3d42e/databases/(default)","uid":"72df2f78-492f-4db3-aea0-9d7d4a65ae40","createTime":"2026-04-17T06:52:46.856524Z","updateTime":"2026-04-17T06:52:46.856524Z","locationId":"nam5","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-05-08T13:43:22.840970Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"s","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IPuSwNn2qZQDMMrv8Y2t9JMD"}
+[debug] [2026-05-08T14:43:22.970Z] Creating new index: {"collectionGroup":"inventoryBatches","queryScope":"COLLECTION","fields":[{"fieldPath":"tenantId","order":"ASCENDING"},{"fieldPath":"productId","order":"ASCENDING"},{"fieldPath":"receivedAt","order":"ASCENDING"}]}
+[debug] [2026-05-08T14:43:22.970Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:22.970Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:22.970Z] >>> [apiv2][query] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryBatches/indexes [none]
+[debug] [2026-05-08T14:43:22.971Z] >>> [apiv2][body] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryBatches/indexes {"fields":[{"fieldPath":"tenantId","order":"ASCENDING"},{"fieldPath":"productId","order":"ASCENDING"},{"fieldPath":"receivedAt","order":"ASCENDING"}],"queryScope":"COLLECTION"}
+[debug] [2026-05-08T14:43:23.588Z] <<< [apiv2][status] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryBatches/indexes 200
+[debug] [2026-05-08T14:43:23.588Z] <<< [apiv2][body] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryBatches/indexes {"name":"projects/appdev-3d42e/databases/(default)/operations/S0U0aFhqT2dBQ0lDDCoDIDVmNGRiZjdlNjRkNy00ODliLWNjOTQtNmNhMi0zMDU2Y2IwMCQac2VuaWxlcGlwCQpBEg","metadata":{"@type":"type.googleapis.com/google.firestore.admin.v1.IndexOperationMetadata","startTime":"2026-05-08T14:43:23.324259Z","index":"projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryBatches/indexes/CICAgOjXh4EK","state":"INITIALIZING"}}
+[debug] [2026-05-08T14:43:23.588Z] Creating new index: {"collectionGroup":"inventoryTransactions","queryScope":"COLLECTION","fields":[{"fieldPath":"tenantId","order":"ASCENDING"},{"fieldPath":"productId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"}]}
+[debug] [2026-05-08T14:43:23.589Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:23.589Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:23.589Z] >>> [apiv2][query] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryTransactions/indexes [none]
+[debug] [2026-05-08T14:43:23.589Z] >>> [apiv2][body] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryTransactions/indexes {"fields":[{"fieldPath":"tenantId","order":"ASCENDING"},{"fieldPath":"productId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"}],"queryScope":"COLLECTION"}
+[debug] [2026-05-08T14:43:24.175Z] <<< [apiv2][status] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryTransactions/indexes 200
+[debug] [2026-05-08T14:43:24.176Z] <<< [apiv2][body] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryTransactions/indexes {"name":"projects/appdev-3d42e/databases/(default)/operations/S01vcFVpSmdBQ0lDDCoDIDA4NWU3NjAzOWFhMC03NzU4LTUxODQtNTgwMC0xNzNkYzllMSQac2VuaWxlcGlwCQpBEg","metadata":{"@type":"type.googleapis.com/google.firestore.admin.v1.IndexOperationMetadata","startTime":"2026-05-08T14:43:23.861519Z","index":"projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryTransactions/indexes/CICAgJiUpoMK","state":"INITIALIZING"}}
+[debug] [2026-05-08T14:43:24.176Z] Creating new index: {"collectionGroup":"inventoryTransactions","queryScope":"COLLECTION","fields":[{"fieldPath":"tenantId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"}]}
+[debug] [2026-05-08T14:43:24.177Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:24.177Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:24.177Z] >>> [apiv2][query] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryTransactions/indexes [none]
+[debug] [2026-05-08T14:43:24.178Z] >>> [apiv2][body] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryTransactions/indexes {"fields":[{"fieldPath":"tenantId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"}],"queryScope":"COLLECTION"}
+[debug] [2026-05-08T14:43:24.605Z] <<< [apiv2][status] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryTransactions/indexes 200
+[debug] [2026-05-08T14:43:24.605Z] <<< [apiv2][body] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryTransactions/indexes {"name":"projects/appdev-3d42e/databases/(default)/operations/S0E0MW1pSmdBQ0lDDCoDIDU1YzNjNjdmNjM3OS0xNGNiLThiNzQtYzk2ZS1lNThiMjliNiQac2VuaWxlcGlwCQpBEg","metadata":{"@type":"type.googleapis.com/google.firestore.admin.v1.IndexOperationMetadata","startTime":"2026-05-08T14:43:24.389224Z","index":"projects/appdev-3d42e/databases/(default)/collectionGroups/inventoryTransactions/indexes/CICAgJim14AK","state":"INITIALIZING"}}
+[debug] [2026-05-08T14:43:24.605Z] Creating new index: {"collectionGroup":"sales","queryScope":"COLLECTION","fields":[{"fieldPath":"tenantId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"}]}
+[debug] [2026-05-08T14:43:24.605Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:24.606Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:24.606Z] >>> [apiv2][query] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/sales/indexes [none]
+[debug] [2026-05-08T14:43:24.606Z] >>> [apiv2][body] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/sales/indexes {"fields":[{"fieldPath":"tenantId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"}],"queryScope":"COLLECTION"}
+[debug] [2026-05-08T14:43:25.103Z] <<< [apiv2][status] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/sales/indexes 200
+[debug] [2026-05-08T14:43:25.103Z] <<< [apiv2][body] POST https://firestore.googleapis.com/v1/projects/appdev-3d42e/databases/(default)/collectionGroups/sales/indexes {"name":"projects/appdev-3d42e/databases/(default)/operations/S0lvOUZqSmdBQ0lDDCoDIDAwYjMzNmJlYWIxYi00OWY5LTdmMjQtZDcyMC1mMjc5YmQzMSQac2VuaWxlcGlwCQpBEg","metadata":{"@type":"type.googleapis.com/google.firestore.admin.v1.IndexOperationMetadata","startTime":"2026-05-08T14:43:24.799540Z","index":"projects/appdev-3d42e/databases/(default)/collectionGroups/sales/indexes/CICAgJjF9oIK","state":"INITIALIZING"}}
+[info] +  firestore: deployed indexes in firestore.indexes.json successfully for (default) database 
+[debug] [2026-05-08T14:43:25.105Z] [rules] releasing cloud.firestore with ruleset projects/appdev-3d42e/rulesets/9bd6d542-570a-4808-a170-657661a13068
+[debug] [2026-05-08T14:43:25.106Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:25.106Z] Checked if tokens are valid: true, expires at: 1778254773348
+[debug] [2026-05-08T14:43:25.107Z] >>> [apiv2][query] PATCH https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/releases/cloud.firestore [none]
+[debug] [2026-05-08T14:43:25.107Z] >>> [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/releases/cloud.firestore {"release":{"name":"projects/appdev-3d42e/releases/cloud.firestore","rulesetName":"projects/appdev-3d42e/rulesets/9bd6d542-570a-4808-a170-657661a13068"}}
+[debug] [2026-05-08T14:43:25.829Z] <<< [apiv2][status] PATCH https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/releases/cloud.firestore 200
+[debug] [2026-05-08T14:43:25.830Z] <<< [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/appdev-3d42e/releases/cloud.firestore {"name":"projects/appdev-3d42e/releases/cloud.firestore","rulesetName":"projects/appdev-3d42e/rulesets/9bd6d542-570a-4808-a170-657661a13068","createTime":"2026-04-17T06:52:49.986760Z","updateTime":"2026-05-08T14:43:25.627874Z"}
+[debug] [2026-05-08T14:43:25.830Z] [rules] updated release projects/appdev-3d42e/releases/cloud.firestore
+[info] +  firestore: released rules firestore.rules to cloud.firestore 
+[info] 
+[info] +  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/appdev-3d42e/overview
